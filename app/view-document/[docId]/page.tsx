@@ -29,7 +29,7 @@ export default async function PublicDocumentViewPage({ params }: { params: Promi
 
   const doc = normalizeDocument(data as Document)
   if (doc.type !== 'agreement') {
-    redirect(`/api/document/${encodeURIComponent(doc.id)}`)
+    redirect(`/api/download-pdf?id=${encodeURIComponent(doc.id)}`)
   }
 
   return <PublicSigningWizard doc={doc} />

@@ -21,7 +21,7 @@ export function buildDocumentViewUrl(documentId: string, source?: UrlSource) {
 
 export function buildDocumentPdfUrl(documentId: string, source?: UrlSource) {
   const safeDocumentId = encodeURIComponent(String(documentId || 'missing-document'))
-  return `${resolveAppUrl(source)}/api/document/${safeDocumentId}`
+  return `${resolveAppUrl(source)}/view-document/${safeDocumentId}`
 }
 
 function normalizeUrl(value?: string | null) {
