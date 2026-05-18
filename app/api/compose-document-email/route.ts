@@ -64,21 +64,46 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    await transporter.sendMail({
-      from: `"${senderDisplayName}" <${process.env.GMAIL_SENDER_EMAIL}>`,
-      to: doc.client_email,
-      subject: `Signature Required: ${docLabel} - NetBounce Placement LLC`,
-      text: [
-        `Hello ${doc.client_name || 'there'},`,
-        '',
-        `Please use this secure link to review the ${docLabel}:`,
-        documentUrl,
-        '',
-        'Thank you,',
-        'NetBounce Placement LLC',
-      ].join('\r\n'),
-      html,
-    })
+    try {
+      await transporter.sendMail({
+        from: `"${senderDisplayName}" <${process.env.GMAIL_SENDER_EMAIL}>`,
+        to: doc.client_email,
+        subject: `Signature Required: ${docLabel} - NetBounce Placement LLC`,
+        text: [
+          `Hello ${doc.client_name || 'there'},`,
+          '',
+          `Please use this secure link to review the ${docLabel}:`,
+          documentUrl,
+          '',
+          'Thank you,',
+          'NetBounce Placement LLC',
+        ].join('\r\n'),
+        html,
+      })
+    } catch (smtpError) {
+      console.warn('SMTP Auth failed, falling back to secure browser query composition routing', smtpError)
+      const fallBackUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(doc.client_email)}&su=${encodeURIComponent(`Signature Required: ${doc.type || 'Agreement'}`)}&body=${encodeURIComponent(`Hello ${doc.client_name || 'Candidate'},\n\nPlease review and sign your document at: ${baseUrl}/view-document/${doc.id}`)}`
+
+      await supabase.from('audit_trail').insert({
+        document_id: doc.id,
+        event: 'SMTP HTML card dispatch failed; Gmail compose fallback prepared',
+        actor: 'system',
+        metadata: {
+          to: doc.client_email,
+          sender_role: senderRole,
+          mode: 'gmail-compose-url',
+          reason: smtpError instanceof Error ? smtpError.message : String(smtpError),
+        },
+      })
+
+      return NextResponse.json({
+        ok: true,
+        success: true,
+        mode: 'gmail-compose-url',
+        draftUrl: fallBackUrl,
+        url: fallBackUrl,
+      })
+    }
 
     await supabase.from('audit_trail').insert({
       document_id: doc.id,

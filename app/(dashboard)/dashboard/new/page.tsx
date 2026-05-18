@@ -588,6 +588,12 @@ async function openEmailDraftResponse(res: Response, filename: string) {
   const contentType = res.headers.get('Content-Type') || '';
   if (contentType.includes('application/json')) {
     const data = await res.json();
+    const draftUrl = data.draftUrl || data.url;
+    if (draftUrl) {
+      const opened = window.open(draftUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) window.location.href = draftUrl;
+      return;
+    }
     if (data.success || data.ok) {
       alert("Professional HTML Email Card with button layout dispatched successfully directly to candidate inbox!");
       return;
