@@ -1,6 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+function requiredServerEnv(name: string, value: string | undefined) {
+  const trimmedValue = value?.trim()
+  if (!trimmedValue) {
+    throw new Error(`Missing required environment variable: ${name}`)
+  }
+  return trimmedValue
+}
+
 /**
  * Server-side Supabase client.
  * Only call from Server Components, Route Handlers, and middleware.
@@ -8,9 +16,10 @@ import { cookies } from 'next/headers'
  */
 export async function createServerSupabaseClient() {
   const cookieStore = await cookies()
+
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    requiredServerEnv('NEXT_PUBLIC_SUPABASE_URL', process.env.NEXT_PUBLIC_SUPABASE_URL),
+    requiredServerEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
     {
       cookies: {
         getAll() { return cookieStore.getAll() },

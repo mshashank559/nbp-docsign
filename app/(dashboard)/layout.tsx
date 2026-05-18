@@ -3,10 +3,10 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import Sidebar from '@/components/ui/Sidebar'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createServerSupabaseClient()
   let isAuthenticated = false
 
   try {
+    const supabase = await createServerSupabaseClient()
     const { data } = await supabase.auth.getUser()
     isAuthenticated = Boolean(data.user)
   } catch {

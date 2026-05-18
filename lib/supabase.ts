@@ -7,7 +7,7 @@ function requiredEnv(name: string, value: string | undefined) {
   const trimmedValue = value?.trim()
   if (!trimmedValue) {
     throw new Error(
-      `Missing ${name}. Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in .env.local, then restart the dev server.`
+      `Missing ${name}. Ensure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are set in your environment.`
     )
   }
 
