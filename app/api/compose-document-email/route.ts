@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { resolveSenderRole } from '@/lib/rbac'
+import { createGmailDraft } from '@/lib/gmail'
 import nodemailer from 'nodemailer'
 
 const DEFAULT_APP_URL = 'https://nbg-docsign.vercel.app'
@@ -55,6 +56,16 @@ export async function POST(req: NextRequest) {
       docLabel,
       documentUrl,
     })
+    const subject = `Signature Required: ${docLabel} - NetBounce Placement LLC`
+    const text = [
+      `Hello ${doc.client_name || 'there'},`,
+      '',
+      `Please use the secure button in this email to review the ${docLabel}.`,
+      documentUrl,
+      '',
+      'Thank you,',
+      'NetBounce Placement LLC',
+    ].join('\r\n')
 
     const transporter = nodemailer.createTransport({
       service: 'gmail',
@@ -68,30 +79,43 @@ export async function POST(req: NextRequest) {
       await transporter.sendMail({
         from: `"${senderDisplayName}" <${process.env.GMAIL_SENDER_EMAIL}>`,
         to: doc.client_email,
-        subject: `Signature Required: ${docLabel} - NetBounce Placement LLC`,
-        text: [
-          `Hello ${doc.client_name || 'there'},`,
-          '',
-          `Please use this secure link to review the ${docLabel}:`,
-          documentUrl,
-          '',
-          'Thank you,',
-          'NetBounce Placement LLC',
-        ].join('\r\n'),
+        subject,
+        text,
         html,
       })
     } catch (smtpError) {
-      console.warn('SMTP Auth failed, falling back to secure browser query composition routing', smtpError)
-      const fallBackUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(doc.client_email)}&su=${encodeURIComponent(`Signature Required: ${doc.type || 'Agreement'}`)}&body=${encodeURIComponent(`Hello ${doc.client_name || 'Candidate'},\n\nPlease review and sign your document at: ${baseUrl}/view-document/${doc.id}`)}`
+      console.warn('SMTP Auth failed, falling back to Gmail HTML draft creation', smtpError)
+      const draftResult = await createGmailDraft({
+        to: doc.client_email,
+        senderDisplayName,
+        subject,
+        text,
+        html,
+        attachments: [],
+      }, senderRole)
+
+      if (!draftResult.ok) {
+        console.error('[compose-document-email] Gmail HTML draft fallback failed', draftResult)
+        return NextResponse.json(
+          {
+            ok: false,
+            success: false,
+            error: draftResult.reason,
+            details: draftResult.details,
+          },
+          { status: 502 },
+        )
+      }
 
       await supabase.from('audit_trail').insert({
         document_id: doc.id,
-        event: 'SMTP HTML card dispatch failed; Gmail compose fallback prepared',
+        event: 'SMTP HTML card dispatch failed; Gmail HTML draft prepared',
         actor: 'system',
         metadata: {
           to: doc.client_email,
           sender_role: senderRole,
-          mode: 'gmail-compose-url',
+          mode: 'gmail-html-draft',
+          gmail_draft_id: draftResult.draftId,
           reason: smtpError instanceof Error ? smtpError.message : String(smtpError),
         },
       })
@@ -99,9 +123,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         success: true,
-        mode: 'gmail-compose-url',
-        draftUrl: fallBackUrl,
-        url: fallBackUrl,
+        mode: 'gmail-html-draft',
+        draftUrl: draftResult.url,
+        url: draftResult.url,
       })
     }
 
