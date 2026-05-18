@@ -82,6 +82,7 @@ export default function NewDocumentPage() {
   const [activeDocId, setActiveDocId] = useState('primary')
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [bundleError, setBundleError] = useState('')
+  const [isMounted, setIsMounted] = useState(false)
   const allowedTypes = useMemo(() => getAllowedDocTypes(role), [role])
   const visibleDocumentTypes = useMemo(
     () => DOCUMENT_TYPES.filter(item => allowedTypes.includes(item.type)),
@@ -118,6 +119,10 @@ export default function NewDocumentPage() {
     } = input
     return allowed
   }
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
 
   useEffect(() => {
     setFields(prev => ({ ...OPERATIONS_DEFAULTS, ...prev }))
@@ -231,6 +236,8 @@ export default function NewDocumentPage() {
     }
     router.push('/dashboard')
   }
+
+  if (!isMounted) return null
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--page-bg)' }}>

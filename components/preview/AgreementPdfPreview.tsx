@@ -45,15 +45,25 @@ export default function AgreementPdfPreview({
           body: JSON.stringify({ fields: currentFields }),
         })
         if (!res.ok) {
-          const message = await res.text().catch(() => '')
+          const body = await res.json().catch(() => ({}))
+          const message = body.error || ''
           if (!cancelled) setError(message || 'Unable to generate agreement preview.')
           return
         }
-        const blob = await res.blob()
-        objectUrl = URL.createObjectURL(blob)
-        if (!cancelled) {
-          setError('')
-          setPdfUrl(objectUrl)
+        const contentType = res.headers.get('Content-Type') || ''
+        if (contentType.includes('application/json')) {
+          const data = await res.json()
+          if (!cancelled) {
+            setError('')
+            setPdfUrl(data.pdfUrl || AGREEMENT_TEMPLATE_URL)
+          }
+        } else {
+          const blob = await res.blob()
+          objectUrl = URL.createObjectURL(blob)
+          if (!cancelled) {
+            setError('')
+            setPdfUrl(objectUrl)
+          }
         }
       } catch (err) {
         if (!cancelled) {
