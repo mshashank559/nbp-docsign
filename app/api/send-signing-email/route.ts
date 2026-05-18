@@ -5,6 +5,7 @@ import { normalizeDocument } from '@/lib/document-normalize'
 import { sendGmailMessage } from '@/lib/gmail'
 import { resolveSenderRole } from '@/lib/rbac'
 import { Document } from '@/lib/types'
+import { buildDocumentViewUrl } from '@/lib/app-url'
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     const normalizedDoc = normalizeDocument(doc as Document)
     const isAgreement = normalizedDoc.type === 'agreement'
 
-    const trackingUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/track/view/${normalizedDoc.id}`
+    const documentUrl = buildDocumentViewUrl(normalizedDoc.id, req)
     const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type as keyof typeof DOCUMENT_TYPE_LABELS] || normalizedDoc.type
 
     const senderDisplayName = senderRole === 'HR'
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     </p>
     <table cellpadding="0" cellspacing="0" style="margin:0 0 24px">
     <tr><td align="center">
-      <a href="${trackingUrl}" style="display:inline-block;background:#111827;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:8px">
+      <a href="${documentUrl}" style="display:inline-block;background:#111827;color:#ffffff;font-size:14px;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:8px">
         ${isAgreement ? 'Review &amp; Sign Document' : 'View Document'}
       </a>
     </td></tr>
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
       to: normalizedDoc.client_email,
       senderDisplayName,
       subject: isAgreement ? `Signature Required: ${docLabel} - NetBounce Placement LLC` : `${docLabel} - NetBounce Placement LLC`,
-      text: `Please use this secure link to view the ${docLabel}: ${trackingUrl}`,
+      text: `Please use this secure link to view the ${docLabel}: ${documentUrl}`,
       html: emailHtml,
       attachments: [],
     }, senderRole)

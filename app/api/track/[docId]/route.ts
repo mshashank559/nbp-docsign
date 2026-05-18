@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { serviceClient } from '@/lib/service-supabase'
 import { insertAuditEvent } from '@/lib/audit'
+import { resolveAppUrl } from '@/lib/app-url'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ docId: string }> }) {
   const { docId: rawDocId } = await params
   const docId = String(rawDocId || '')
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+  const appUrl = resolveAppUrl(req)
   const viewUrl = new URL(`/view-document/${docId || 'missing-document'}`, appUrl)
 
   if (!docId || docId === 'undefined' || docId === 'null') {

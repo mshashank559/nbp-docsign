@@ -3,6 +3,7 @@ import { DOCUMENT_TYPE_LABELS } from './document-catalog'
 import { buildGeneratedDocumentPdf } from './generated-document-pdf'
 import { normalizeDocument } from './document-normalize'
 import { Document } from './types'
+import { buildDocumentViewUrl } from './app-url'
 
 export type StoredAttachment = {
   id: string
@@ -121,16 +122,15 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
   const normalizedDoc = normalizeDocument(doc)
   const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
   const isAgreement = normalizedDoc.type === 'agreement'
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
   const actionUrl = normalizedDoc.signing_token
-    ? `${appUrl}/api/track/view/${normalizedDoc.id}`
+    ? buildDocumentViewUrl(normalizedDoc.id)
     : ''
   const documentActions = attachments
     .filter(attachment => attachment.documentId && attachment.signingToken)
     .map(attachment => ({
       label: attachment.docLabel || attachment.docType || docLabel,
       filename: attachment.filename,
-      url: `${appUrl}/api/track/view/${attachment.documentId}`,
+      url: buildDocumentViewUrl(attachment.documentId!),
       isAgreement: attachment.docType === 'agreement',
     }))
   const subject = isAgreement

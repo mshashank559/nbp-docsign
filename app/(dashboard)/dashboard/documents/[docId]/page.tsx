@@ -8,6 +8,7 @@ import DocPreview from '@/components/preview/DocPreview'
 import NbgSignOff from '@/components/ui/NbgSignOff'
 import GeneratedEmailButton from '@/components/ui/GeneratedEmailButton'
 import DocumentActivityTracker from '@/components/ui/DocumentActivityTracker'
+import { resolveAppUrl } from '@/lib/app-url'
 import { formatDistanceToNow, format } from 'date-fns'
 import clsx from 'clsx'
 import Link from 'next/link'
@@ -29,7 +30,7 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
     .eq('document_id', doc.id)
     .order('created_at', { ascending: false })
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ''
+  const appUrl = resolveAppUrl()
   const signingUrl = `${appUrl}/sign/${doc.signing_token}`
   const audit = (auditRows ?? []) as Array<Record<string, any>>
   const viewEvents = audit.filter(entry => String(entry.event || '').toLowerCase().includes('view') || String(entry.event || '').toLowerCase().includes('opened'))

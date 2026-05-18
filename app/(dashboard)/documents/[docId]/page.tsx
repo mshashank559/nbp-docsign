@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Document } from '@/lib/types'
 import { normalizeDocument } from '@/lib/document-normalize'
 import DocumentDetailClient from './document-detail-client'
+import { resolveAppUrl } from '@/lib/app-url'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,8 +21,7 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
     .eq('document_id', doc.id)
     .order('created_at', { ascending: false })
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://nbg-docsign.vercel.app')
+  const appUrl = resolveAppUrl()
 
   const signingUrl = `${appUrl}/sign/${doc.signing_token}`
 

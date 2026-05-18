@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { DOCUMENT_TYPE_LABELS } from '@/lib/document-catalog'
 import { buildSignedDocumentPdf } from '@/lib/signed-pdf'
+import { resolveAppUrl } from '@/lib/app-url'
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,8 +16,7 @@ export async function POST(req: NextRequest) {
     const { data: doc } = await supabase.from('documents').select('*').eq('id', documentId).single()
     if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://nbg-docsign.vercel.app')
+    const appUrl = resolveAppUrl(req)
 
     const docLabel = DOCUMENT_TYPE_LABELS[doc.type as keyof typeof DOCUMENT_TYPE_LABELS] || doc.type
     const signedPdf = await buildSignedDocumentPdf(doc)

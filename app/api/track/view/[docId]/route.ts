@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { serviceClient } from '@/lib/service-supabase'
 import { insertAuditEvent } from '@/lib/audit'
+import { resolveAppUrl } from '@/lib/app-url'
 
 // Initialize Supabase with Service Role to bypass RLS for unauthenticated tracking
 
@@ -9,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ docId: string }> } 
 ) {
   const { docId } = await params
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+  const appUrl = resolveAppUrl(req)
   const safeDocId = String(docId || '')
   const documentUrl = new URL(`/view-document/${safeDocId || 'missing-document'}`, appUrl)
 

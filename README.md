@@ -17,7 +17,7 @@ Secure document signing platform for NetBounce Global LLC.
 
 2. Add Supabase credentials in `.env.local`:
    ```env
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
+   NEXT_PUBLIC_APP_URL=https://nbg-docsign.vercel.app
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-project-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
    SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key

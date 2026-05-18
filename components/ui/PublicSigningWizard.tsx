@@ -108,7 +108,6 @@ export default function PublicSigningWizard({ doc }: { doc: Document }) {
         actor={doc.client_email}
         source="signing"
         scrollContainerId="public-document-scroll"
-        trackOpen={false}
       />
 
       <header style={{ height: 60, background: '#ffffff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', gap: 16 }}>

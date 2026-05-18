@@ -3,6 +3,7 @@ import { serviceClient } from '@/lib/service-supabase'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { Document } from '@/lib/types'
 import { getTrackedDocumentPath, recordEmailDocumentClick } from '@/lib/document-tracking'
+import { resolveAppUrl } from '@/lib/app-url'
 
 
 export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
     .eq('signing_token', params.token)
     .single()
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+  const appUrl = resolveAppUrl(req)
 
   if (error || !data) {
     return NextResponse.redirect(new URL('/login', appUrl))

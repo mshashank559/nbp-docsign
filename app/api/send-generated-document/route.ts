@@ -5,6 +5,7 @@ import { normalizeDocument } from '@/lib/document-normalize'
 import { sendGmailMessage } from '@/lib/gmail'
 import { resolveSenderRole } from '@/lib/rbac'
 import { Document } from '@/lib/types'
+import { buildDocumentViewUrl } from '@/lib/app-url'
 
 const DEFAULT_TEST_EMAIL = 'enroll@netbounceplacement.com'
 
@@ -22,8 +23,7 @@ export async function POST(req: NextRequest) {
 
     const doc = normalizeDocument(data as Document)
     const docLabel = DOCUMENT_TYPE_LABELS[doc.type] || doc.type
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || ''
-    const trackingUrl = `${appUrl}/api/track/view/${doc.id}`
+    const documentUrl = buildDocumentViewUrl(doc.id, req)
     const emailHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif">
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
         <tr><td style="padding:28px">
           <p style="margin:0 0 14px;color:#0D1F14;font-size:14px">Hello ${escapeHtml(doc.client_name)},</p>
           <p style="margin:0 0 22px;color:#334155;font-size:14px;line-height:1.6">Please use the secure button below to view your document.</p>
-          <a href="${trackingUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 22px;border-radius:8px">View ${escapeHtml(docLabel)}</a>
+          <a href="${documentUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 22px;border-radius:8px">View ${escapeHtml(docLabel)}</a>
           <p style="margin:22px 0 0;color:#94a3b8;font-size:12px;line-height:1.5">Opening this secure link records document activity for delivery tracking.</p>
         </td></tr>
       </table>
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       to,
       senderDisplayName: senderRole === 'HR' ? 'NetBounce HR' : senderRole === 'ACCOUNTS' ? 'NetBounce Accounts' : 'NetBounce Placement LLC',
       subject: `${docLabel} - NetBounce Placement LLC`,
-      text: `Please use this secure link to view the ${docLabel}: ${trackingUrl}`,
+      text: `Please use this secure link to view the ${docLabel}: ${documentUrl}`,
       html: emailHtml,
       attachments: [],
     }, senderRole)
