@@ -22,6 +22,12 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error('[agreement-preview-pdf] Failed to prepare preview descriptor', error)
-    return NextResponse.json({ error: 'Unable to prepare agreement preview' }, { status: 500 })
+    return NextResponse.json(
+      {
+        ok: false,
+        error: 'Unable to prepare agreement preview',
+      },
+      { status: 500 },
+    )
   }
 }

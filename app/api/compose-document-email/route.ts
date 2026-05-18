@@ -17,26 +17,51 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const { documentId } = await req.json()
-    if (!documentId) return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+    if (!documentId) {
+      return NextResponse.json(
+        { ok: false, error: 'Missing documentId' },
+        { status: 400 },
+      )
+    }
 
     const supabase = await createServerSupabaseClient()
     const { data: userData } = await supabase.auth.getUser()
     const senderRole = resolveSenderRole(userData.user)
-    const { data, error } = await supabase.from('documents').select('*').eq('id', documentId).single()
-    if (error || !data) return NextResponse.json({ error: 'Document not found' }, { status: 404 })
 
-    const { doc, childDocs, documentIds } = await prepareTrackedBundleDocuments(supabase, normalizeDocument(data as Document))
+    const { data, error } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('id', documentId)
+      .single()
+
+    if (error || !data) {
+      return NextResponse.json(
+        { ok: false, error: 'Document not found' },
+        { status: 404 },
+      )
+    }
+
+    const document = normalizeDocument(data as Document)
+    const { doc, childDocs, documentIds } = await prepareTrackedBundleDocuments(supabase, document)
+
     const attachments = buildDocumentEmailActionAttachments(doc, childDocs)
-    if (!attachments.length) return NextResponse.json({ error: 'No document actions could be prepared' }, { status: 400 })
+    if (!attachments.length) {
+      return NextResponse.json(
+        { ok: false, error: 'No document actions could be prepared' },
+        { status: 400 },
+      )
+    }
 
     const emailInput = {
       ...buildDocumentEmailInput(doc, attachments, req),
-      senderDisplayName: senderRole === 'HR'
-        ? 'NetBounce HR'
-        : senderRole === 'ACCOUNTS'
+      senderDisplayName:
+        senderRole === 'HR'
+          ? 'NetBounce HR'
+          : senderRole === 'ACCOUNTS'
           ? 'NetBounce Accounts'
           : 'NetBounce Placement LLC',
     }
+
     const draftUrl = buildGmailComposeUrl({
       to: emailInput.to,
       subject: emailInput.subject,
@@ -49,7 +74,7 @@ export async function POST(req: NextRequest) {
       actor: 'system',
       metadata: {
         to: doc.client_email,
-        attachment_count: 0,
+        attachment_count: attachments.length,
         document_action_count: attachments.length,
         document_action_names: attachments.map(attachment => attachment.filename),
         sender_role: senderRole,
@@ -63,22 +88,29 @@ export async function POST(req: NextRequest) {
       .in('id', documentIds)
 
     return NextResponse.json({
-      success: true,
       ok: true,
+      success: true,
       mode: 'gmail-compose-url',
       draftUrl,
       url: draftUrl,
+      attachmentCount: attachments.length,
+      documentIds,
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to prepare email draft'
     console.error('[compose-document-email] Failed to create draft', error)
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json(
+      { ok: false, error: message },
+      { status: 500 },
+    )
   }
 }
 
 async function prepareTrackedBundleDocuments(supabase: any, doc: Document) {
   const bundleDocs = parseBundleDocuments(doc.fields?.__bundleDocuments)
-  if (!bundleDocs.length) return { doc, childDocs: [] as Document[], documentIds: [doc.id] }
+  if (!bundleDocs.length) {
+    return { doc, childDocs: [] as Document[], documentIds: [doc.id] }
+  }
 
   const childDocs: Document[] = []
   const nextBundleDocs = []
@@ -141,11 +173,16 @@ async function insertBundleDocument(supabase: any, payload: Record<string, unkno
   if (!result.error) return result.data
   if (!String(result.error.message || '').includes('documents_type_check')) throw result.error
 
-  const legacyResult = await supabase.from('documents').insert({
-    ...payload,
-    type: getLegacyDatabaseType(type),
-    fields: { ...((payload.fields as Record<string, string>) || {}), __docType: type },
-  }).select().single()
+  const legacyResult = await supabase
+    .from('documents')
+    .insert({
+      ...payload,
+      type: getLegacyDatabaseType(type),
+      fields: { ...((payload.fields as Record<string, string>) || {}), __docType: type },
+    })
+    .select()
+    .single()
+
   if (legacyResult.error) throw legacyResult.error
   return legacyResult.data
 }
