@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { resolveSenderRole } from '@/lib/rbac'
 import { createGmailDraft } from '@/lib/gmail'
+import { normalizeDocument } from '@/lib/document-normalize'
 import nodemailer from 'nodemailer'
 
 const DEFAULT_APP_URL = 'https://nbg-docsign.vercel.app'
@@ -41,9 +42,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL
-    const documentUrl = `${baseUrl}/view-document/${doc.id}`
-    const docLabel = getDocumentLabel(doc.type)
+    const normalizedDoc = normalizeDocument(doc)
+    const baseUrl = resolveRequestBaseUrl(req)
+    const documentUrl = `${baseUrl}/view-document/${encodeURIComponent(normalizedDoc.id)}`
+    const isAgreement = normalizedDoc.type === 'agreement' || normalizedDoc.type === 'review-agreement'
+    const docLabel = getDocumentLabel(normalizedDoc.type)
     const senderDisplayName =
       senderRole === 'HR'
         ? 'NetBounce HR'
@@ -52,9 +55,10 @@ export async function POST(req: NextRequest) {
         : 'NetBounce Placement LLC'
 
     const html = buildHtmlEmail({
-      clientName: doc.client_name || 'there',
+      clientName: normalizedDoc.client_name || 'there',
       docLabel,
       documentUrl,
+      isAgreement,
     })
     const subject = `Signature Required: ${docLabel} - NetBounce Placement LLC`
     const text = [
@@ -78,7 +82,7 @@ export async function POST(req: NextRequest) {
     try {
       await transporter.sendMail({
         from: `"${senderDisplayName}" <${process.env.GMAIL_SENDER_EMAIL}>`,
-        to: doc.client_email,
+        to: normalizedDoc.client_email,
         subject,
         text,
         html,
@@ -86,7 +90,7 @@ export async function POST(req: NextRequest) {
     } catch (smtpError) {
       console.warn('SMTP Auth failed, falling back to Gmail HTML draft creation', smtpError)
       const draftResult = await createGmailDraft({
-        to: doc.client_email,
+        to: normalizedDoc.client_email,
         senderDisplayName,
         subject,
         text,
@@ -112,7 +116,7 @@ export async function POST(req: NextRequest) {
         event: 'SMTP HTML card dispatch failed; Gmail HTML draft prepared',
         actor: 'system',
         metadata: {
-          to: doc.client_email,
+          to: normalizedDoc.client_email,
           sender_role: senderRole,
           mode: 'gmail-html-draft',
           gmail_draft_id: draftResult.draftId,
@@ -134,9 +138,10 @@ export async function POST(req: NextRequest) {
       event: 'HTML card template dispatched',
       actor: 'system',
       metadata: {
-        to: doc.client_email,
+        to: normalizedDoc.client_email,
         sender_role: senderRole,
         mode: 'smtp-html-email',
+        document_url: documentUrl,
       },
     })
 
@@ -160,14 +165,17 @@ function buildHtmlEmail({
   clientName,
   docLabel,
   documentUrl,
+  isAgreement,
 }: {
   clientName: string
   docLabel: string
   documentUrl: string
+  isAgreement: boolean
 }) {
   const safeClientName = escapeHtml(clientName)
   const safeDocLabel = escapeHtml(docLabel)
   const safeDocumentUrl = escapeHtml(documentUrl)
+  const buttonLabel = isAgreement ? 'Review &amp; Sign Document' : 'View Document'
 
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
@@ -191,7 +199,7 @@ function buildHtmlEmail({
                       <p style="margin:0 0 4px;color:#0D1F14;font-size:14px;font-weight:700">${safeDocLabel}</p>
                     </td>
                     <td align="right" style="vertical-align:middle;width:190px">
-                      <a href="${safeDocumentUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 18px;border-radius:8px;white-space:nowrap">View Document</a>
+                      <a href="${safeDocumentUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 18px;border-radius:8px;white-space:nowrap">${buttonLabel}</a>
                     </td>
                   </tr>
                 </table>
@@ -204,6 +212,19 @@ function buildHtmlEmail({
     </td></tr>
   </table>
 </body></html>`
+}
+
+function resolveRequestBaseUrl(req: NextRequest) {
+  const forwardedHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
+  const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() || 'https'
+  const host = forwardedHost || req.headers.get('host')?.split(',')[0]?.trim()
+  if (host) return `${forwardedProto}://${host}`.replace(/\/+$/, '')
+
+  try {
+    return new URL(req.url).origin
+  } catch {
+    return (process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\/+$/, '')
+  }
 }
 
 function getDocumentLabel(type: string) {

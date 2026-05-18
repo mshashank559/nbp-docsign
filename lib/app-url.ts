@@ -8,8 +8,8 @@ type UrlSource = {
 const DEFAULT_APP_URL = 'https://nbg-docsign.vercel.app'
 
 export function resolveAppUrl(_source?: UrlSource) {
-  const cleanBaseUrl = normalizeUrl(process.env.NEXT_PUBLIC_APP_URL) || DEFAULT_APP_URL
-  return cleanBaseUrl
+  const headerBaseUrl = resolveSourceUrl(_source)
+  return headerBaseUrl || normalizeUrl(process.env.NEXT_PUBLIC_APP_URL) || DEFAULT_APP_URL
 }
 
 export function buildDocumentViewUrl(documentId: string, source?: UrlSource) {
@@ -32,4 +32,15 @@ function normalizeUrl(value?: string | null) {
   } catch {
     return ''
   }
+}
+
+function resolveSourceUrl(source?: UrlSource) {
+  const forwardedHost = source?.headers?.get('x-forwarded-host')?.split(',')[0]?.trim()
+  const host = forwardedHost || source?.headers?.get('host')?.split(',')[0]?.trim()
+  if (host) {
+    const proto = source?.headers?.get('x-forwarded-proto')?.split(',')[0]?.trim() || 'https'
+    return `${proto}://${host}`
+  }
+
+  return normalizeUrl(source?.url)
 }
