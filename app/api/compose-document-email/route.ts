@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     const supabase = await createServerSupabaseClient()
     const { data: userData } = await supabase.auth.getUser()
-    const senderRole = resolveSenderRole(userData?.user)
+    const senderRole = resolveSenderRole(userData.user)
 
     const { data, error } = await supabase
       .from('documents')
@@ -44,14 +44,12 @@ export async function POST(req: NextRequest) {
     const document = normalizeDocument(data as Document)
     const { doc, childDocs, documentIds } = await prepareTrackedBundleDocuments(supabase, document)
 
-    // SAFE GUARD: Agar attachment building cloud par fail ho ya local binary maange, 
-    // toh hum manually fallback structures generate karenge taaki button crash na ho.
-    let attachments: any[] = []
-    try {
-      attachments = buildDocumentEmailActionAttachments(doc, childDocs)
-    } catch (attachError) {
-      console.log('Using safe fallback for attachments in cloud production')
-      attachments = [] // Yeh completely error-free hai aur build pass karwa dega
+    const attachments = buildDocumentEmailActionAttachments(doc, childDocs)
+    if (!attachments.length) {
+      return NextResponse.json(
+        { ok: false, error: 'No document actions could be prepared' },
+        { status: 400 },
+      )
     }
 
     const emailInput = {
@@ -64,7 +62,6 @@ export async function POST(req: NextRequest) {
           : 'NetBounce Placement LLC',
     }
 
-    // Gmail Compose parameters building safely
     const draftUrl = buildGmailComposeUrl({
       to: emailInput.to,
       subject: emailInput.subject,
@@ -102,16 +99,10 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to prepare email draft'
     console.error('[compose-document-email] Failed to create draft', error)
-    
-    // CRITICAL: Agar pure chain mein kahin bhi powershell spawn trigger crash karega,
-    // toh yeh fallback return block page par se button gayab nahi hone dega aur direct user ko safe link pass kareg.
-    return NextResponse.json({
-      ok: true,
-      success: true,
-      mode: 'gmail-compose-url',
-      draftUrl: `https://mail.google.com/mail/?view=cm&fs=1`,
-      url: `https://mail.google.com/mail/?view=cm&fs=1`
-    })
+    return NextResponse.json(
+      { ok: false, error: message },
+      { status: 500 },
+    )
   }
 }
 
