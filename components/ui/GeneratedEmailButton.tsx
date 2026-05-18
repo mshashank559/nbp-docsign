@@ -47,9 +47,10 @@ async function openEmailDraftResponse(res: Response, filename: string) {
   const contentType = res.headers.get('Content-Type') || ''
   if (contentType.includes('application/json')) {
     const data = await res.json()
-    if (data.url) {
-      const opened = window.open(data.url, '_blank', 'noopener,noreferrer')
-      if (!opened) window.location.href = data.url
+    const draftUrl = data.draftUrl || data.url
+    if (draftUrl) {
+      const opened = window.open(draftUrl, '_blank', 'noopener,noreferrer')
+      if (!opened) window.location.href = draftUrl
       return
     }
   }

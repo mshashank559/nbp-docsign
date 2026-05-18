@@ -1,118 +1,73 @@
-import { copyFile, mkdtemp, readFile, rm, writeFile } from 'fs/promises'
-import os from 'os'
-import path from 'path'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib'
 
 type AgreementFields = Record<string, string>
 
-const execFileAsync = promisify(execFile)
-const TEMPLATE_PATH = path.join(process.cwd(), 'public', 'templates', 'agreement-template.docx')
-
-const REPLACEMENTS: Array<{ needle: string; key: string }> = [
-  { needle: 'Name:', key: 'agreementName' },
-  { needle: 'Address:', key: 'agreementAddress' },
-  { needle: 'Contact:', key: 'agreementContact' },
-  { needle: 'Enrollment Plan type:', key: 'enrollmentPlanType' },
-  { needle: 'Final payment conditions:', key: 'finalPaymentConditions' },
-  { needle: 'Current agreed payment condition:', key: 'currentAgreedPaymentConditions' },
-]
-
 export async function buildFilledAgreementPdf(fields: AgreementFields) {
-  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'nbg-agreement-'))
-  const docxPath = path.join(tempDir, 'agreement.docx')
-  const pdfPath = path.join(tempDir, 'agreement.pdf')
-  const scriptPath = path.join(tempDir, 'fill-agreement.ps1')
+  const pdf = await PDFDocument.create()
+  const regular = await pdf.embedFont(StandardFonts.Helvetica)
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+  let page = pdf.addPage([612, 792])
+  const marginX = 54
+  const pageBottom = 58
+  let y = 736
 
-  try {
-    await copyFile(TEMPLATE_PATH, docxPath)
-    await writeFile(scriptPath, buildPowerShellScript(docxPath, pdfPath, fields), 'utf8')
-
-    await execFileAsync('powershell.exe', [
-      '-NoProfile',
-      '-ExecutionPolicy',
-      'Bypass',
-      '-File',
-      scriptPath,
-    ], { windowsHide: true, timeout: 120000 })
-
-    return readFile(pdfPath)
-  } finally {
-    await rm(tempDir, { recursive: true, force: true })
-  }
-}
-
-function buildPowerShellScript(docxPath: string, pdfPath: string, fields: AgreementFields) {
-  const replacements = REPLACEMENTS
-    .map(({ needle, key }) => ({
-      needle,
-      value: `${needle} ${(fields[key] || '').trim()}`.trim(),
-    }))
-    .filter(item => item.value !== item.needle)
-
-  const replacementJson = JSON.stringify(replacements).replace(/'/g, "''")
-  const currentAgreedFallback = (fields.currentAgreedPaymentCondition || '').trim()
-  const priSignatureImage = (fields.priAuthoritySignatureImage || fields.preAuthoritySign || '').trim()
-
-  return `
-$ErrorActionPreference = 'Stop'
-$docxPath = '${escapePs(docxPath)}'
-$pdfPath = '${escapePs(pdfPath)}'
-$replacements = '${replacementJson}' | ConvertFrom-Json
-$currentAgreedFallback = '${escapePs(currentAgreedFallback)}'
-$priSignatureImage = '${escapePs(priSignatureImage)}'
-
-$word = New-Object -ComObject Word.Application
-$word.Visible = $false
-$doc = $null
-
-try {
-  $doc = $word.Documents.Open($docxPath)
-
-  foreach ($item in $replacements) {
-    $find = $doc.Content.Find
-    $find.ClearFormatting()
-    $find.Replacement.ClearFormatting()
-    [void]$find.Execute($item.needle, $false, $false, $false, $false, $false, $true, 1, $false, $item.value, 2)
+  const ensure = (height = 18) => {
+    if (y - height >= pageBottom) return
+    page = pdf.addPage([612, 792])
+    y = 736
   }
 
-  if ($currentAgreedFallback) {
-    $find = $doc.Content.Find
-    $find.ClearFormatting()
-    $find.Replacement.ClearFormatting()
-    [void]$find.Execute('Current agreed payment condition:', $false, $false, $false, $false, $false, $true, 1, $false, 'Current agreed payment condition: ' + $currentAgreedFallback, 2)
-  }
-
-  if ($priSignatureImage) {
-    $find = $doc.Content.Find
-    $find.ClearFormatting()
-    [void]$find.Execute('Authority Signature', $false, $false)
-    if ($find.Found) {
-      $range = $find.Parent
-      $range.Collapse(1)
-      if ($priSignatureImage.StartsWith('data:image')) {
-        $base64 = $priSignatureImage.Substring($priSignatureImage.IndexOf(',') + 1)
-        $imagePath = [System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($docxPath), 'pri-authority-signature.png')
-        [System.IO.File]::WriteAllBytes($imagePath, [System.Convert]::FromBase64String($base64))
-        [void]$doc.InlineShapes.AddPicture($imagePath, $false, $true, $range)
-      } else {
-        $range.InsertBefore($priSignatureImage + [Environment]::NewLine)
-      }
+  const text = (value: string, size = 10, isBold = false, gap = size + 8) => {
+    for (const line of wrapText(value, isBold ? bold : regular, size, 504)) {
+      ensure(size + 4)
+      page.drawText(line, { x: marginX, y, size, font: isBold ? bold : regular, color: rgb(0, 0, 0) })
+      y -= gap
     }
   }
 
-  $doc.Save()
-  $doc.ExportAsFixedFormat($pdfPath, 17)
-}
-finally {
-  if ($doc -ne $null) { $doc.Close($false) | Out-Null }
-  $word.Quit() | Out-Null
-  if ($doc -ne $null) { [System.Runtime.InteropServices.Marshal]::ReleaseComObject($doc) | Out-Null }
-  [System.Runtime.InteropServices.Marshal]::ReleaseComObject($word) | Out-Null
-}
-`
+  const field = (label: string, ...keys: string[]) => {
+    const value = keys.map(key => String(fields[key] || '').trim()).find(Boolean) || ''
+    text(`${label}: ${value || '-'}`, 10, false, 16)
+  }
+
+  text('Job Acquire Program by Netbounce Placement LLC - Terms of Enrollment', 14, true, 20)
+  y -= 8
+  text('Made as of the Effective Date', 10, true, 18)
+  text('Between Netbounce Placement LLC and the candidate identified below.', 10, false, 18)
+  y -= 8
+  field('Name', 'agreementName')
+  field('Address', 'agreementAddress')
+  field('Contact', 'agreementContact')
+  field('Enrollment Plan type', 'enrollmentPlanType')
+  field('Final payment conditions', 'finalPaymentConditions')
+  field('Current agreed payment condition', 'currentAgreedPaymentConditions', 'currentAgreedPaymentCondition')
+  y -= 8
+  text('This generated copy is provided for review and in-platform signing. Please use the secure document link in the email to complete the signing request.', 10, false, 17)
+
+  const signature = String(fields.priAuthoritySignatureImage || fields.preAuthoritySign || '').trim()
+  if (signature && !signature.startsWith('data:image')) {
+    y -= 8
+    text(`Authority Signature: ${signature}`, 10, false, 16)
+  }
+
+  return pdf.save()
 }
 
-function escapePs(value: string) {
-  return value.replace(/'/g, "''")
+function wrapText(value: string, font: { widthOfTextAtSize(text: string, size: number): number }, size: number, width: number) {
+  const lines: string[] = []
+  for (const paragraph of String(value || '').split(/\r?\n/)) {
+    const words = paragraph.split(/\s+/).filter(Boolean)
+    let line = ''
+    for (const word of words) {
+      const next = `${line} ${word}`.trim()
+      if (line && font.widthOfTextAtSize(next, size) > width) {
+        lines.push(line)
+        line = word
+      } else {
+        line = next
+      }
+    }
+    if (line) lines.push(line)
+  }
+  return lines.length ? lines : ['']
 }

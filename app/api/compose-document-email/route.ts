@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { buildDocumentEmailAttachments, buildDocumentEmailDraft, buildDocumentEmailInput, parseBundleDocuments } from '@/lib/document-attachments'
+import { buildDocumentEmailActionAttachments, buildDocumentEmailAttachments, buildDocumentEmailDraft, buildDocumentEmailInput, parseBundleDocuments } from '@/lib/document-attachments'
 import { getLegacyDatabaseType, normalizeDocument } from '@/lib/document-normalize'
 import { createGmailDraft } from '@/lib/gmail'
+import { buildGmailComposeUrl } from '@/lib/mail-compose-url'
 import { resolveSenderRole } from '@/lib/rbac'
 import { DocType, Document } from '@/lib/types'
 
@@ -18,7 +19,9 @@ export async function POST(req: NextRequest) {
     if (error || !data) return NextResponse.json({ error: 'Document not found' }, { status: 404 })
 
     const { doc, childDocs, documentIds } = await prepareTrackedBundleDocuments(supabase, normalizeDocument(data as Document))
-    const attachments = await buildDocumentEmailAttachments(doc, childDocs)
+    const attachments = process.env.NODE_ENV === 'production'
+      ? buildDocumentEmailActionAttachments(doc, childDocs)
+      : await buildDocumentEmailAttachments(doc, childDocs)
     if (!attachments.length) return NextResponse.json({ error: 'No document actions could be prepared' }, { status: 400 })
 
     const emailInput = {
@@ -29,6 +32,42 @@ export async function POST(req: NextRequest) {
           ? 'NetBounce Accounts'
           : 'NetBounce Placement LLC',
     }
+
+    if (process.env.NODE_ENV === 'production') {
+      const draftUrl = buildGmailComposeUrl({
+        to: emailInput.to,
+        subject: emailInput.subject,
+        body: emailInput.text,
+      })
+
+      await supabase.from('audit_trail').insert({
+        document_id: doc.id,
+        event: 'Email draft compose URL prepared with tracked document links',
+        actor: 'system',
+        metadata: {
+          to: doc.client_email,
+          attachment_count: 0,
+          document_action_count: attachments.length,
+          document_action_names: attachments.map(attachment => attachment.filename),
+          sender_role: senderRole,
+          mode: 'gmail-compose-url',
+        },
+      })
+
+      await supabase
+        .from('documents')
+        .update({ status: 'sent', sent_at: new Date().toISOString() })
+        .in('id', documentIds)
+
+      return NextResponse.json({
+        success: true,
+        ok: true,
+        mode: 'gmail-compose-url',
+        draftUrl,
+        url: draftUrl,
+      })
+    }
+
     const gmailDraft = await createGmailDraft(emailInput, senderRole)
     const filename = `netbounce_${doc.type}_${doc.client_name || 'document'}_draft.eml`.replace(/[^\w.-]+/g, '_')
 

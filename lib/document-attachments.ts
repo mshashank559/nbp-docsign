@@ -1,6 +1,4 @@
-import { buildFilledAgreementPdf } from './agreement-pdf'
 import { DOCUMENT_TYPE_LABELS } from './document-catalog'
-import { buildGeneratedDocumentPdf } from './generated-document-pdf'
 import { normalizeDocument } from './document-normalize'
 import { Document } from './types'
 import { buildDocumentPdfUrl, buildDocumentViewUrl } from './app-url'
@@ -73,6 +71,7 @@ export async function buildDocumentEmailAttachments(doc: Document, bundleDocumen
   if (plainAgreement) {
     documents.push(withDocumentMeta(storedToEmailAttachment(plainAgreement), normalizedDoc, primaryLabel))
   } else if (normalizedDoc.type === 'agreement') {
+    const { buildFilledAgreementPdf } = await import('./agreement-pdf')
     const pdfBytes = await buildFilledAgreementPdf(fields)
     documents.push(withDocumentMeta({
       filename: safeFilename(`agreement_${normalizedDoc.client_name || 'document'}.pdf`),
@@ -80,6 +79,7 @@ export async function buildDocumentEmailAttachments(doc: Document, bundleDocumen
       content: Buffer.from(pdfBytes),
     }, normalizedDoc, primaryLabel))
   } else {
+    const { buildGeneratedDocumentPdf } = await import('./generated-document-pdf')
     const pdfBytes = await buildGeneratedDocumentPdf(normalizedDoc)
     documents.push(withDocumentMeta({
       filename: safeFilename(`${normalizedDoc.type}_${normalizedDoc.client_name || 'document'}.pdf`),
@@ -101,8 +101,8 @@ export async function buildDocumentEmailAttachments(doc: Document, bundleDocumen
   for (const childDoc of childDocuments) {
     const childLabel = DOCUMENT_TYPE_LABELS[childDoc.type] || childDoc.type
     const pdfBytes = childDoc.type === 'agreement'
-      ? await buildFilledAgreementPdf(childDoc.fields || {})
-      : await buildGeneratedDocumentPdf(childDoc)
+      ? await (await import('./agreement-pdf')).buildFilledAgreementPdf(childDoc.fields || {})
+      : await (await import('./generated-document-pdf')).buildGeneratedDocumentPdf(childDoc)
     documents.push(withDocumentMeta({
       filename: safeFilename(`${childDoc.type}_${normalizedDoc.client_name || 'document'}.pdf`),
       contentType: 'application/pdf',
@@ -117,6 +117,36 @@ export async function buildDocumentEmailAttachments(doc: Document, bundleDocumen
   }
 
   return dedupeAttachments(attachments)
+}
+
+export function buildDocumentEmailActionAttachments(doc: Document, bundleDocuments?: Document[]): EmailAttachment[] {
+  const normalizedDoc = normalizeDocument(doc)
+  const primaryLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
+  const actions: EmailAttachment[] = [withDocumentMeta({
+    filename: safeFilename(`${normalizedDoc.type}_${normalizedDoc.client_name || 'document'}.pdf`),
+    contentType: 'application/pdf',
+    content: Buffer.alloc(0),
+  }, normalizedDoc, primaryLabel)]
+
+  const childDocuments = bundleDocuments?.length
+    ? bundleDocuments.map(child => normalizeDocument(child))
+    : parseBundleDocuments(normalizedDoc.fields?.__bundleDocuments).map(bundleDoc => normalizeDocument({
+        ...normalizedDoc,
+        id: bundleDoc.documentId || `${normalizedDoc.id}-${bundleDoc.id}`,
+        signing_token: bundleDoc.signingToken || normalizedDoc.signing_token,
+        type: bundleDoc.type,
+        fields: bundleDoc.fields || {},
+      }))
+
+  for (const childDoc of childDocuments) {
+    actions.push(withDocumentMeta({
+      filename: safeFilename(`${childDoc.type}_${normalizedDoc.client_name || 'document'}.pdf`),
+      contentType: 'application/pdf',
+      content: Buffer.alloc(0),
+    }, childDoc, DOCUMENT_TYPE_LABELS[childDoc.type] || childDoc.type))
+  }
+
+  return actions.filter(action => action.documentId && action.signingToken)
 }
 
 export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachment[], source?: NextRequest): DocumentEmailInput {
