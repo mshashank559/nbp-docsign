@@ -5,7 +5,7 @@ import { normalizeDocument } from '@/lib/document-normalize'
 import { sendGmailMessage } from '@/lib/gmail'
 import { resolveSenderRole } from '@/lib/rbac'
 import { Document } from '@/lib/types'
-import { buildDocumentViewUrl } from '@/lib/app-url'
+import { buildDocumentPdfUrl, buildDocumentViewUrl } from '@/lib/app-url'
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,7 +22,9 @@ export async function POST(req: NextRequest) {
     const normalizedDoc = normalizeDocument(doc as Document)
     const isAgreement = normalizedDoc.type === 'agreement'
 
-    const documentUrl = buildDocumentViewUrl(normalizedDoc.id, req)
+    const documentUrl = normalizedDoc.type === 'agreement'
+      ? buildDocumentViewUrl(normalizedDoc.id, req)
+      : buildDocumentPdfUrl(normalizedDoc.id, req)
     const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type as keyof typeof DOCUMENT_TYPE_LABELS] || normalizedDoc.type
 
     const senderDisplayName = senderRole === 'HR'

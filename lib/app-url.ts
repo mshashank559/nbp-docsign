@@ -5,25 +5,30 @@ type UrlSource = {
   }
 }
 
-const CANONICAL_PRODUCTION_APP_URL = 'https://nbg-docsign.vercel.app'
-
 export function resolveAppUrl(source?: UrlSource) {
   const configuredUrl = normalizeUrl(process.env.NEXT_PUBLIC_APP_URL)
-  const vercelUrl = normalizeUrl(process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
+  const productionUrl = normalizeUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '')
+  const deploymentUrl = normalizeUrl(process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '')
   const requestUrl = resolveRequestOrigin(source)
 
-  if (configuredUrl && !isLocalhost(configuredUrl) && !isDisallowedDeploymentUrl(configuredUrl)) return configuredUrl
-  if (requestUrl && !isLocalhost(requestUrl) && !isDisallowedDeploymentUrl(requestUrl)) return requestUrl
-  if (vercelUrl && !isDisallowedDeploymentUrl(vercelUrl)) return vercelUrl
+  for (const candidate of [configuredUrl, requestUrl, productionUrl, deploymentUrl]) {
+    if (candidate && isUsableAppUrl(candidate)) return candidate
+  }
+
   if (configuredUrl) return configuredUrl
   if (requestUrl) return requestUrl
 
-  return CANONICAL_PRODUCTION_APP_URL
+  throw new Error('Unable to resolve application URL. Set NEXT_PUBLIC_APP_URL to the production domain.')
 }
 
 export function buildDocumentViewUrl(documentId: string, source?: UrlSource) {
   const safeDocumentId = encodeURIComponent(String(documentId || 'missing-document'))
   return `${resolveAppUrl(source)}/view-document/${safeDocumentId}`
+}
+
+export function buildDocumentPdfUrl(documentId: string, source?: UrlSource) {
+  const safeDocumentId = encodeURIComponent(String(documentId || 'missing-document'))
+  return `${resolveAppUrl(source)}/api/document/${safeDocumentId}`
 }
 
 function resolveRequestOrigin(source?: UrlSource) {
@@ -56,6 +61,10 @@ function normalizeUrl(value?: string | null) {
   }
 }
 
+function isUsableAppUrl(value: string) {
+  return !isLocalhost(value) && !isDisallowedDeploymentUrl(value)
+}
+
 function isLocalhost(value: string) {
   try {
     const hostname = new URL(value).hostname
@@ -68,9 +77,11 @@ function isLocalhost(value: string) {
 function isDisallowedDeploymentUrl(value: string) {
   try {
     const hostname = new URL(value).hostname
+    const lowerValue = value.toLowerCase()
     return hostname === 'vercel.com'
       || hostname.endsWith('.vercel.com')
-      || (hostname.endsWith('.vercel.app') && hostname !== new URL(CANONICAL_PRODUCTION_APP_URL).hostname)
+      || hostname === 'your-new-vercel-domain.vercel.app'
+      || lowerValue.includes('vercel.com/')
   } catch {
     return false
   }

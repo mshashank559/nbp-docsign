@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     if (!attachments.length) return NextResponse.json({ error: 'No document actions could be prepared' }, { status: 400 })
 
     const emailInput = {
-      ...buildDocumentEmailInput(doc, attachments),
+      ...buildDocumentEmailInput(doc, attachments, req),
       senderDisplayName: senderRole === 'HR'
         ? 'NetBounce HR'
         : senderRole === 'ACCOUNTS'

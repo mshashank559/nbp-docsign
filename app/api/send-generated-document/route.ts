@@ -5,7 +5,7 @@ import { normalizeDocument } from '@/lib/document-normalize'
 import { sendGmailMessage } from '@/lib/gmail'
 import { resolveSenderRole } from '@/lib/rbac'
 import { Document } from '@/lib/types'
-import { buildDocumentViewUrl } from '@/lib/app-url'
+import { buildDocumentPdfUrl } from '@/lib/app-url'
 
 const DEFAULT_TEST_EMAIL = 'enroll@netbounceplacement.com'
 
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const doc = normalizeDocument(data as Document)
     const docLabel = DOCUMENT_TYPE_LABELS[doc.type] || doc.type
-    const documentUrl = buildDocumentViewUrl(doc.id, req)
+    const documentUrl = buildDocumentPdfUrl(doc.id, req)
     const emailHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif">

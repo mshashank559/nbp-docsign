@@ -3,7 +3,8 @@ import { DOCUMENT_TYPE_LABELS } from './document-catalog'
 import { buildGeneratedDocumentPdf } from './generated-document-pdf'
 import { normalizeDocument } from './document-normalize'
 import { Document } from './types'
-import { buildDocumentViewUrl } from './app-url'
+import { buildDocumentPdfUrl, buildDocumentViewUrl } from './app-url'
+import type { NextRequest } from 'next/server'
 
 export type StoredAttachment = {
   id: string
@@ -118,19 +119,17 @@ export async function buildDocumentEmailAttachments(doc: Document, bundleDocumen
   return dedupeAttachments(attachments)
 }
 
-export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachment[]): DocumentEmailInput {
+export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachment[], source?: NextRequest): DocumentEmailInput {
   const normalizedDoc = normalizeDocument(doc)
   const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
   const isAgreement = normalizedDoc.type === 'agreement'
-  const actionUrl = normalizedDoc.signing_token
-    ? buildDocumentViewUrl(normalizedDoc.id)
-    : ''
+  const actionUrl = buildDocumentActionUrl(normalizedDoc.id, normalizedDoc.type, source)
   const documentActions = attachments
     .filter(attachment => attachment.documentId && attachment.signingToken)
     .map(attachment => ({
       label: attachment.docLabel || attachment.docType || docLabel,
       filename: attachment.filename,
-      url: buildDocumentViewUrl(attachment.documentId!),
+      url: buildDocumentActionUrl(attachment.documentId!, attachment.docType, source),
       isAgreement: attachment.docType === 'agreement',
     }))
   const subject = isAgreement
@@ -165,6 +164,10 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
     html: htmlBody,
     attachments: [],
   }
+}
+
+function buildDocumentActionUrl(documentId: string, type?: Document['type'], source?: NextRequest) {
+  return type === 'agreement' ? buildDocumentViewUrl(documentId, source) : buildDocumentPdfUrl(documentId, source)
 }
 
 export function buildDocumentEmailDraft(doc: Document, attachments: EmailAttachment[]) {

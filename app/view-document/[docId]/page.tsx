@@ -1,4 +1,4 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { serviceClient } from '@/lib/service-supabase'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { Document } from '@/lib/types'
@@ -28,5 +28,9 @@ export default async function PublicDocumentViewPage({ params }: { params: Promi
   if (error || !data) notFound()
 
   const doc = normalizeDocument(data as Document)
+  if (doc.type !== 'agreement') {
+    redirect(`/api/document/${encodeURIComponent(doc.id)}`)
+  }
+
   return <PublicSigningWizard doc={doc} />
 }

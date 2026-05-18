@@ -3,10 +3,15 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Document } from '@/lib/types'
 import { buildGeneratedDocumentPdf } from '@/lib/generated-document-pdf'
 import { normalizeDocument } from '@/lib/document-normalize'
+import { buildDocumentPdfResponse } from '@/lib/document-pdf-response'
 
 export async function GET(req: NextRequest) {
   const id = new URL(req.url).searchParams.get('id')
   if (!id) return new NextResponse('Missing document id', { status: 400 })
+
+  if (new URL(req.url).searchParams.get('public') === '1') {
+    return buildDocumentPdfResponse(req, id)
+  }
 
   const supabase = await createServerSupabaseClient()
   const { data, error } = await supabase.from('documents').select('*').eq('id', id).single()
