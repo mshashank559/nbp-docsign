@@ -588,14 +588,17 @@ async function openEmailDraftResponse(res: Response, filename: string) {
   const contentType = res.headers.get('Content-Type') || ''
   if (contentType.includes('application/json')) {
     const data = await res.json()
-    const draftUrl = data.draftUrl || data.url
-    if (draftUrl) {
-      const opened = window.open(draftUrl, '_blank', 'noopener,noreferrer')
-      if (!opened) window.location.href = draftUrl
-      return
+    if (data.success || data.ok) {
+      // Browser tab kholne ke bajay user ko screen par clear confirmation dega
+      alert("Professional HTML Email Dispatched Directly via NetBounce Mail Server!");
+      return;
     }
   }
-  downloadBlob(await res.blob(), filename)
+  
+  // Backup file fallback mapping if needed
+  if (res.status === 200) {
+    downloadBlob(await res.blob(), filename);
+  }
 }
 
 function downloadBlob(blob: Blob, filename: string) {
