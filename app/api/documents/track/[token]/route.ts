@@ -1,18 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { Document } from '@/lib/types'
 import { getTrackedDocumentPath, recordEmailDocumentClick } from '@/lib/document-tracking'
 
-function serviceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
 
 export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
-  const supabase = serviceClient()
+  let supabase
+  try {
+    supabase = serviceClient()
+  } catch (err) {
+    return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
+  }
   const { data, error } = await supabase
     .from('documents')
     .select('*')

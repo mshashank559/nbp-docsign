@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { DOCUMENT_TYPE_LABELS } from '@/lib/document-catalog'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { incrementDocumentViewCount, insertAuditEvent } from '@/lib/audit'
@@ -10,10 +10,12 @@ export async function GET(req: NextRequest) {
   const token = searchParams.get('token')
   const alreadyTracked = searchParams.get('tracked') === '1'
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  let supabase
+  try {
+    supabase = serviceClient()
+  } catch (err) {
+    return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
+  }
 
   const query = id
     ? supabase.from('documents').select('*').eq('id', id).single()

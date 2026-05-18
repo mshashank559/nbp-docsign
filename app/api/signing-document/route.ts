@@ -1,23 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { Document } from '@/lib/types'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { requiresSignatureDocument } from '@/lib/document-workflow'
 import { incrementDocumentViewCount, insertAuditEvent } from '@/lib/audit'
 
-function serviceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+// Use centralized service client helper
 
 export async function GET(req: NextRequest) {
   const token = new URL(req.url).searchParams.get('token')
   const alreadyTracked = new URL(req.url).searchParams.get('tracked') === '1'
   if (!token) return NextResponse.json({ error: 'Missing token' }, { status: 400 })
 
-  const supabase = serviceClient()
+  let supabase
+  try {
+    supabase = serviceClient()
+  } catch (err) {
+    return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
+  }
   const { data, error } = await supabase.from('documents').select('*').eq('signing_token', token).single()
   if (error || !data) return NextResponse.json({ error: 'This signing link is invalid or has expired.' }, { status: 404 })
 
@@ -55,7 +55,11 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Missing signature details' }, { status: 400 })
   }
 
-  const supabase = serviceClient()
+  try {
+    supabase = serviceClient()
+  } catch (err) {
+    return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
+  }
   const { data, error } = await supabase.from('documents').select('*').eq('signing_token', token).single()
   if (error || !data) return NextResponse.json({ error: 'Document not found' }, { status: 404 })
 

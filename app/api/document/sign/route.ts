@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { DOCUMENT_TYPE_LABELS } from '@/lib/document-catalog'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { insertAuditEvent } from '@/lib/audit'
@@ -9,10 +9,12 @@ import { Document } from '@/lib/types'
 const nodemailer = require('nodemailer') as any
 
 function serviceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  let supabase
+  try {
+    supabase = serviceClient()
+  } catch (err) {
+    return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
+  }
 }
 
 export async function POST(req: NextRequest) {

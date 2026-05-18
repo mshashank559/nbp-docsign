@@ -1,21 +1,24 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { Document } from '@/lib/types'
 import PublicSigningWizard from '@/components/ui/PublicSigningWizard'
 
 export const dynamic = 'force-dynamic'
 
-function serviceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
-
 export default async function PublicDocumentViewPage({ params }: { params: Promise<{ docId: string }> }) {
   const { docId } = await params
-  const supabase = serviceClient()
+  let supabase
+  try {
+    supabase = serviceClient()
+  } catch (err) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h2>System configuration error</h2>
+        <p>Missing Supabase credentials on the server. Please contact the site administrator.</p>
+      </div>
+    )
+  }
   const { data, error } = await supabase
     .from('documents')
     .select('*')

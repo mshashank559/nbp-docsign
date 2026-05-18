@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { incrementDocumentViewCount, insertAuditEvent } from '@/lib/audit'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { Document } from '@/lib/types'
 
-function serviceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
@@ -22,7 +16,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing document identifier' }, { status: 400 })
   }
 
-  const supabase = serviceClient()
+  let supabase
+  try {
+    supabase = serviceClient()
+  } catch (err) {
+    return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
+  }
   const query = documentId
     ? supabase.from('documents').select('*').eq('id', documentId).single()
     : supabase.from('documents').select('*').eq('signing_token', token).single()

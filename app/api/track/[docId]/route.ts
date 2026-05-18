@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { insertAuditEvent } from '@/lib/audit'
-
-function serviceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ docId: string }> }) {
   const { docId: rawDocId } = await params
@@ -21,7 +14,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ docI
   }
 
   try {
-    const supabase = serviceClient()
+    let supabase
+    try {
+      supabase = serviceClient()
+    } catch (err) {
+      console.error(err)
+      return NextResponse.redirect(viewUrl)
+    }
     const { data: doc, error: fetchError } = await supabase
       .from('documents')
       .select('id, type, client_email, view_count')

@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { DOCUMENT_TYPE_LABELS } from '@/lib/document-catalog'
 
 export async function POST(req: NextRequest) {
   try {
     const { token } = await req.json()
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    let supabase
+    try {
+      supabase = serviceClient()
+    } catch (err) {
+      return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
+    }
     const { data: doc } = await supabase.from('documents').select('*').eq('signing_token', token).single()
     if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     const docLabel = DOCUMENT_TYPE_LABELS[doc.type as keyof typeof DOCUMENT_TYPE_LABELS] || doc.type
