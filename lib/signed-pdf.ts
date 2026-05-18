@@ -1,0 +1,59 @@
+import { PDFDocument } from 'pdf-lib'
+import { buildFilledAgreementPdf } from './agreement-pdf'
+import { buildGeneratedDocumentPdf } from './generated-document-pdf'
+import { normalizeDocument } from './document-normalize'
+import { Document } from './types'
+
+export async function buildSignedDocumentPdf(input: Document) {
+  const doc = normalizeDocument(input)
+  const baseBytes = doc.type === 'agreement'
+    ? await buildFilledAgreementPdf(doc.fields || {})
+    : await buildGeneratedDocumentPdf(doc)
+
+  if (!doc.client_signature) return Buffer.from(baseBytes)
+
+  const pdf = await PDFDocument.load(baseBytes)
+  const pages = pdf.getPages()
+  const page = pages[pages.length - 1]
+  const signature = await embedSignature(pdf, doc.client_signature)
+  if (!signature) return Buffer.from(await pdf.save())
+
+  const { width, height } = page.getSize()
+  const pos = parseSignaturePosition(doc.fields?.signaturePosition)
+  const imageWidth = 150
+  const imageHeight = 54
+  const x = (width * pos.x) / 100
+  const y = height - (height * pos.y) / 100 - imageHeight
+
+  page.drawImage(signature, {
+    x: Math.min(width - imageWidth - 24, Math.max(24, x)),
+    y: Math.min(height - imageHeight - 24, Math.max(24, y)),
+    width: imageWidth,
+    height: imageHeight,
+  })
+
+  return Buffer.from(await pdf.save())
+}
+
+async function embedSignature(pdf: PDFDocument, dataUrl: string) {
+  const match = dataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/i)
+  if (!match) return null
+
+  const bytes = Buffer.from(match[2], 'base64')
+  return match[1].toLowerCase() === 'png'
+    ? pdf.embedPng(bytes)
+    : pdf.embedJpg(bytes)
+}
+
+function parseSignaturePosition(value: unknown) {
+  if (!value) return { x: 62, y: 72 }
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value
+    return {
+      x: Math.min(86, Math.max(4, Number(parsed?.x) || 62)),
+      y: Math.min(88, Math.max(8, Number(parsed?.y) || 72)),
+    }
+  } catch {
+    return { x: 62, y: 72 }
+  }
+}
