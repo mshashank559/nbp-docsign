@@ -55,6 +55,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Missing signature details' }, { status: 400 })
   }
 
+  let supabase
   try {
     supabase = serviceClient()
   } catch (err) {

@@ -8,6 +8,11 @@ export async function GET(
   req: NextRequest, 
   { params }: { params: Promise<{ docId: string }> } 
 ) {
+  const { docId } = await params
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
+  const safeDocId = String(docId || '')
+  const documentUrl = new URL(`/view-document/${safeDocId || 'missing-document'}`, appUrl)
+
   let supabase
   try {
     supabase = serviceClient()
@@ -15,15 +20,6 @@ export async function GET(
     console.error(err)
     return NextResponse.redirect(documentUrl)
   }
-  
-  // 1. Unwrap params (Required for Next.js 15+)
-  const { docId } = await params
-  
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
-  const safeDocId = String(docId || '')
-  
-  // This is the UI page where the PDF viewer lives
-  const documentUrl = new URL(`/view-document/${safeDocId || 'missing-document'}`, appUrl)
 
   // Fail-safe: If no ID, redirect to a safe page immediately
   if (!safeDocId || safeDocId === 'undefined' || safeDocId === 'null') {

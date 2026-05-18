@@ -8,15 +8,6 @@ import { Document } from '@/lib/types'
 
 const nodemailer = require('nodemailer') as any
 
-function serviceClient() {
-  let supabase
-  try {
-    supabase = serviceClient()
-  } catch (err) {
-    return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
-  }
-}
-
 export async function POST(req: NextRequest) {
   console.log('[document/sign] request received')
   const body = await req.json().catch(() => ({}))
