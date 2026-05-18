@@ -585,17 +585,14 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 async function openEmailDraftResponse(res: Response, filename: string) {
-  const contentType = res.headers.get('Content-Type') || ''
+  const contentType = res.headers.get('Content-Type') || '';
   if (contentType.includes('application/json')) {
-    const data = await res.json()
+    const data = await res.json();
     if (data.success || data.ok) {
-      // Browser tab kholne ke bajay user ko screen par clear confirmation dega
-      alert("Professional HTML Email Dispatched Directly via NetBounce Mail Server!");
+      alert("Professional HTML Email Card with button layout dispatched successfully directly to candidate inbox!");
       return;
     }
   }
-  
-  // Backup file fallback mapping if needed
   if (res.status === 200) {
     downloadBlob(await res.blob(), filename);
   }
