@@ -6,6 +6,14 @@ import { buildGmailComposeUrl } from '@/lib/mail-compose-url'
 import { resolveSenderRole } from '@/lib/rbac'
 import { DocType, Document } from '@/lib/types'
 
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    mode: 'gmail-compose-url',
+    message: 'Email draft links are prepared with POST and opened by the browser client.',
+  })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { documentId } = await req.json()

@@ -7,6 +7,14 @@ import { resolveSenderRole } from '@/lib/rbac'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { Document } from '@/lib/types'
 
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    mode: 'gmail-compose-url',
+    message: 'Signing email draft links are prepared with POST and opened by the browser client.',
+  })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { documentId } = await req.json()
