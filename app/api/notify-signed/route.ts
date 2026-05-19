@@ -1,26 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { serviceClient } from '@/lib/service-supabase'
 import { DOCUMENT_TYPE_LABELS } from '@/lib/document-catalog'
-import { buildSignedDocumentPdf } from '@/lib/signed-pdf'
-import { resolveAppUrl } from '@/lib/app-url'
 
 export async function POST(req: NextRequest) {
   try {
     const { documentId, signatoryName, signatoryEmail } = await req.json()
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
+    let supabase
+    try {
+      supabase = serviceClient()
+    } catch (err) {
+      console.error(err)
+      return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
+    }
 
     const { data: doc } = await supabase.from('documents').select('*').eq('id', documentId).single()
     if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-    const appUrl = resolveAppUrl(req)
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://nbg-docsign.vercel.app')
 
     const docLabel = DOCUMENT_TYPE_LABELS[doc.type as keyof typeof DOCUMENT_TYPE_LABELS] || doc.type
-    const signedPdf = await buildSignedDocumentPdf(doc)
-    const signedFilename = `${doc.type}_${doc.client_name || 'signed'}_signed.pdf`.replace(/[^\w.-]+/g, '_')
 
     const downloadUrl = `${appUrl}/api/download-pdf?id=${documentId}`
     const dashboardUrl = `${appUrl}/dashboard/documents/${documentId}`
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 <tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="background:white;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
   <tr><td style="background:#0D1F14;padding:24px 32px">
-    <p style="margin:0;color:#A8D5B8;font-size:11px;font-weight:700;margin-bottom:4px">NetBounce Placement LLC · DocSign</p>
+    <p style="margin:0;color:#A8D5B8;font-size:11px;font-weight:700;margin-bottom:4px">NetBounce Global LLC · DocSign</p>
     <p style="margin:0;color:white;font-size:18px;font-weight:700">✓ Document Signed</p>
   </td></tr>
   <tr><td style="padding:32px">
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     </table>
   </td></tr>
   <tr><td style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb">
-    <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center">NetBounce Placement LLC · enroll@netbounceplacement.com · +1 (915) 666-9102</p>
+    <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center">NetBounce Global LLC · docsign@netbounceglobal.com · +1 (915) 666-9102</p>
   </td></tr>
 </table>
 </td></tr>
@@ -65,13 +65,12 @@ export async function POST(req: NextRequest) {
 
     const accessToken = await getAccessToken()
     if (accessToken && process.env.GMAIL_SENDER_EMAIL) {
-      // Send to NPB team
+      // Send to NBG team
       const nbgMsg = buildMime({
         from: process.env.GMAIL_SENDER_EMAIL,
         to: process.env.GMAIL_SENDER_EMAIL,
         subject: `✓ Signed: ${docLabel} — ${doc.client_name}`,
         html,
-        attachments: [{ filename: signedFilename, contentType: 'application/pdf', content: signedPdf }],
       })
       await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST',
@@ -87,22 +86,22 @@ export async function POST(req: NextRequest) {
 <tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="background:white;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
   <tr><td style="background:#0D1F14;padding:24px 32px">
-    <p style="margin:0;color:#A8D5B8;font-size:11px;font-weight:700;margin-bottom:4px">NetBounce Placement LLC</p>
+    <p style="margin:0;color:#A8D5B8;font-size:11px;font-weight:700;margin-bottom:4px">NetBounce Global LLC</p>
     <p style="margin:0;color:white;font-size:18px;font-weight:700">Your signed document is ready</p>
   </td></tr>
   <tr><td style="padding:32px">
     <p style="margin:0 0 12px;color:#0D1F14;font-size:14px">Hello ${doc.client_name},</p>
-    <p style="margin:0 0 20px;color:#374151;font-size:14px;line-height:1.6">Thank you for signing the <strong>${docLabel}</strong> with NetBounce Placement LLC. Your signed copy is ready to download.</p>
+    <p style="margin:0 0 20px;color:#374151;font-size:14px;line-height:1.6">Thank you for signing the <strong>${docLabel}</strong> with NetBounce Global LLC. Your signed copy is ready to download.</p>
     <p style="margin:0 0 8px;color:#374151;font-size:14px"><strong>Signed:</strong> ${signedTime}</p>
     <table cellpadding="0" cellspacing="0" style="margin:20px 0">
     <tr><td style="background:#0D1F14;border-radius:8px;padding:12px 24px">
       <a href="${downloadUrl}" style="color:white;font-size:14px;font-weight:700;text-decoration:none">Download Signed Document ↓</a>
     </td></tr>
     </table>
-    <p style="margin:0;color:#9ca3af;font-size:12px">Questions? Contact us at enroll@netbounceplacement.com</p>
+    <p style="margin:0;color:#9ca3af;font-size:12px">Questions? Contact us at docsign@netbounceglobal.com</p>
   </td></tr>
   <tr><td style="padding:16px 32px;background:#f9fafb;border-top:1px solid #e5e7eb">
-    <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center">NetBounce Placement LLC · enroll@netbounceplacement.com · +1 (915) 666-9102</p>
+    <p style="margin:0;color:#9ca3af;font-size:11px;text-align:center">NetBounce Global LLC · docsign@netbounceglobal.com · +1 (915) 666-9102</p>
   </td></tr>
 </table>
 </td></tr>
@@ -112,9 +111,8 @@ export async function POST(req: NextRequest) {
       const clientMsg = buildMime({
         from: process.env.GMAIL_SENDER_EMAIL,
         to: doc.client_email,
-        subject: `Your signed ${docLabel} — NetBounce Placement LLC`,
+        subject: `Your signed ${docLabel} — NetBounce Global LLC`,
         html: clientHtml,
-        attachments: [],
       })
       await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST',
@@ -133,9 +131,7 @@ export async function POST(req: NextRequest) {
 }
 
 async function getAccessToken() {
-  const GMAIL_CLIENT_ID = (process.env.GMAIL_CLIENT_ID || '').trim().replace(/^['"]|['"]$/g, '')
-  const GMAIL_CLIENT_SECRET = (process.env.GMAIL_CLIENT_SECRET || '').trim().replace(/^['"]|['"]$/g, '')
-  const GMAIL_REFRESH_TOKEN = (process.env.GMAIL_REFRESH_TOKEN || '').trim().replace(/^['"]|['"]$/g, '')
+  const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN } = process.env
   if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET || !GMAIL_REFRESH_TOKEN) return null
   const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -145,50 +141,7 @@ async function getAccessToken() {
   return (await res.json()).access_token ?? null
 }
 
-function buildMime({
-  from,
-  to,
-  subject,
-  html,
-  attachments = [],
-}: {
-  from: string
-  to: string
-  subject: string
-  html: string
-  attachments?: Array<{ filename: string; contentType: string; content: Buffer }>
-}) {
-  if (!attachments.length) {
-    const mime = [`From: NetBounce Placement LLC <${from}>`, `To: ${to}`, `Subject: ${subject}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=utf-8', '', html].join('\r\n')
-    return Buffer.from(mime).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
-  }
-
-  const boundary = `nbg-signed-${Date.now()}`
-  const lines = [
-    `From: NetBounce Placement LLC <${from}>`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'MIME-Version: 1.0',
-    `Content-Type: multipart/mixed; boundary="${boundary}"`,
-    '',
-    `--${boundary}`,
-    'Content-Type: text/html; charset=utf-8',
-    '',
-    html,
-  ]
-
-  for (const attachment of attachments) {
-    lines.push(
-      `--${boundary}`,
-      `Content-Type: ${attachment.contentType}; name="${attachment.filename}"`,
-      'Content-Transfer-Encoding: base64',
-      `Content-Disposition: attachment; filename="${attachment.filename}"`,
-      '',
-      attachment.content.toString('base64').replace(/.{1,76}/g, '$&\r\n').trim(),
-    )
-  }
-
-  lines.push(`--${boundary}--`)
-  const mime = lines.join('\r\n')
+function buildMime({ from, to, subject, html }: { from: string; to: string; subject: string; html: string }) {
+  const mime = [`From: NetBounce Placement LLC <${from}>`, `To: ${to}`, `Subject: ${subject}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=utf-8', '', html].join('\r\n')
   return Buffer.from(mime).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
