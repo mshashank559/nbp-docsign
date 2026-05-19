@@ -8,7 +8,7 @@ import { resolveAppUrl } from '@/lib/app-url'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ token: string }> | { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ) {
   const resolvedParams = await params
   const token = decodeURIComponent(String(resolvedParams.token || ''))
