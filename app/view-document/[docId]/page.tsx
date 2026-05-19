@@ -3,11 +3,13 @@ import { serviceClient } from '@/lib/service-supabase'
 import { normalizeDocument } from '@/lib/document-normalize'
 import { Document } from '@/lib/types'
 import PublicSigningWizard from '@/components/ui/PublicSigningWizard'
+import { requiresSignatureDocument } from '@/lib/document-workflow'
 
 export const dynamic = 'force-dynamic'
 
 export default async function PublicDocumentViewPage({ params }: { params: Promise<{ docId: string }> }) {
   const { docId } = await params
+  const documentKey = decodeURIComponent(docId || '')
   let supabase
   try {
     supabase = serviceClient()
@@ -22,13 +24,24 @@ export default async function PublicDocumentViewPage({ params }: { params: Promi
   const { data, error } = await supabase
     .from('documents')
     .select('*')
-    .eq('id', docId)
+    .eq('id', documentKey)
     .single()
 
-  if (error || !data) notFound()
+  let documentRecord = data
+  if (error || !documentRecord) {
+    const tokenResult = await supabase
+      .from('documents')
+      .select('*')
+      .eq('signing_token', documentKey)
+      .single()
 
-  const doc = normalizeDocument(data as Document)
-  if (doc.type !== 'agreement') {
+    documentRecord = tokenResult.data
+  }
+
+  if (!documentRecord) notFound()
+
+  const doc = normalizeDocument(documentRecord as Document)
+  if (!requiresSignatureDocument(doc)) {
     redirect(`/api/download-pdf?id=${encodeURIComponent(doc.id)}`)
   }
 
