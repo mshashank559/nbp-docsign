@@ -48,8 +48,11 @@ export async function POST(req: NextRequest) {
     const templateSigningUrl = `${baseUrl}/view-document/${encodeURIComponent(documentId)}`
     const actions = buildDocumentEmailActionAttachments(normalizedDoc)
     const emailInput = buildDocumentEmailInput(normalizedDoc, actions, { url: baseUrl })
-    const draftResult = await createGmailDraft(emailInput, senderRole)
+    if (emailInput.html) {
+      emailInput.html = emailInput.html.replace(/\/api\/documents\/track\/[a-zA-Z0-9_\-]+/g, `/view-document/${documentId}`)
+    }
 
+    const draftResult = await createGmailDraft(emailInput, senderRole)
     const sentAt = new Date().toISOString()
     const { error: updateError } = await supabase
       .from('documents')
