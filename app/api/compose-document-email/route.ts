@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { resolveSenderRole } from '@/lib/rbac'
-import { createGmailDraft } from '@/lib/gmail'
 import { normalizeDocument } from '@/lib/document-normalize'
 import nodemailer from 'nodemailer'
 
@@ -29,23 +28,26 @@ export async function POST(req: NextRequest) {
     const { data: userData } = await supabase.auth.getUser()
     const senderRole = resolveSenderRole(userData.user)
 
-    const { data: doc, error } = await supabase
+    const { data: updatedDoc, error: updateError } = await supabase
       .from('documents')
-      .select('*')
+      .update({ status: 'sent', sent_at: new Date().toISOString() })
       .eq('id', documentId)
+      .select()
       .single()
 
-    if (error || !doc) {
+    if (updateError || !updatedDoc) {
+      console.error('[compose-document-email] Document send-state update failed', updateError)
       return NextResponse.json(
-        { ok: false, error: 'Document not found' },
-        { status: 404 },
+        { ok: false, error: updateError?.message || 'Document not found' },
+        { status: updateError?.code === 'PGRST116' ? 404 : 500 },
       )
     }
 
-    const normalizedDoc = normalizeDocument(doc)
-    const baseUrl = resolveRequestBaseUrl(req)
-    const documentUrl = `${baseUrl}/view-document/${encodeURIComponent(normalizedDoc.id)}`
-    const isAgreement = normalizedDoc.type === 'agreement' || normalizedDoc.type === 'review-agreement'
+    const normalizedDoc = normalizeDocument(updatedDoc)
+    const verifiedDocumentId = normalizedDoc.id || documentId
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\/+$/, '')
+    const templateSigningUrl = `${baseUrl}/view-document/${verifiedDocumentId}`
+    const isAgreement = normalizedDoc.type === 'agreement'
     const docLabel = getDocumentLabel(normalizedDoc.type)
     const senderDisplayName =
       senderRole === 'HR'
@@ -57,15 +59,15 @@ export async function POST(req: NextRequest) {
     const html = buildHtmlEmail({
       clientName: normalizedDoc.client_name || 'there',
       docLabel,
-      documentUrl,
+      documentUrl: templateSigningUrl,
       isAgreement,
     })
     const subject = `Signature Required: ${docLabel} - NetBounce Placement LLC`
     const text = [
-      `Hello ${doc.client_name || 'there'},`,
+      `Hello ${normalizedDoc.client_name || 'there'},`,
       '',
       `Please use the secure button in this email to review the ${docLabel}.`,
-      documentUrl,
+      templateSigningUrl,
       '',
       'Thank you,',
       'NetBounce Placement LLC',
@@ -88,38 +90,17 @@ export async function POST(req: NextRequest) {
         html,
       })
     } catch (smtpError) {
-      console.warn('SMTP Auth failed, falling back to Gmail HTML draft creation', smtpError)
-      const draftResult = await createGmailDraft({
-        to: normalizedDoc.client_email,
-        senderDisplayName,
-        subject,
-        text,
-        html,
-        attachments: [],
-      }, senderRole)
-
-      if (!draftResult.ok) {
-        console.error('[compose-document-email] Gmail HTML draft fallback failed', draftResult)
-        return NextResponse.json(
-          {
-            ok: false,
-            success: false,
-            error: draftResult.reason,
-            details: draftResult.details,
-          },
-          { status: 502 },
-        )
-      }
+      console.warn('[compose-document-email] SMTP HTML dispatch failed; returning candidate link fallback', smtpError)
 
       await supabase.from('audit_trail').insert({
-        document_id: doc.id,
-        event: 'SMTP HTML card dispatch failed; Gmail HTML draft prepared',
+        document_id: normalizedDoc.id,
+        event: 'SMTP HTML card dispatch failed; candidate link returned',
         actor: 'system',
         metadata: {
           to: normalizedDoc.client_email,
           sender_role: senderRole,
-          mode: 'gmail-html-draft',
-          gmail_draft_id: draftResult.draftId,
+          mode: 'candidate-link-fallback',
+          templateSigningUrl,
           reason: smtpError instanceof Error ? smtpError.message : String(smtpError),
         },
       })
@@ -127,30 +108,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         ok: true,
         success: true,
-        mode: 'gmail-html-draft',
-        draftUrl: draftResult.url,
-        url: draftResult.url,
+        mode: 'candidate-link-fallback',
+        message: 'Document link prepared. SMTP dispatch failed; use the returned candidate link.',
+        templateSigningUrl,
+        url: templateSigningUrl,
       })
     }
 
     await supabase.from('audit_trail').insert({
-      document_id: doc.id,
+      document_id: normalizedDoc.id,
       event: 'HTML card template dispatched',
       actor: 'system',
       metadata: {
         to: normalizedDoc.client_email,
         sender_role: senderRole,
         mode: 'smtp-html-email',
-        document_url: documentUrl,
+        templateSigningUrl,
       },
     })
 
-    await supabase
-      .from('documents')
-      .update({ status: 'sent', sent_at: new Date().toISOString() })
-      .eq('id', doc.id)
-
-    return NextResponse.json({ ok: true, success: true, message: 'HTML card template dispatched.' })
+    return NextResponse.json({
+      ok: true,
+      success: true,
+      mode: 'smtp-html-email',
+      message: 'HTML card template dispatched.',
+      templateSigningUrl,
+      url: templateSigningUrl,
+    })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to dispatch HTML card template'
     console.error('[compose-document-email] Failed to dispatch HTML email', error)
@@ -212,19 +196,6 @@ function buildHtmlEmail({
     </td></tr>
   </table>
 </body></html>`
-}
-
-function resolveRequestBaseUrl(req: NextRequest) {
-  const forwardedHost = req.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
-  const forwardedProto = req.headers.get('x-forwarded-proto')?.split(',')[0]?.trim() || 'https'
-  const host = forwardedHost || req.headers.get('host')?.split(',')[0]?.trim()
-  if (host) return `${forwardedProto}://${host}`.replace(/\/+$/, '')
-
-  try {
-    return new URL(req.url).origin
-  } catch {
-    return (process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\/+$/, '')
-  }
 }
 
 function getDocumentLabel(type: string) {
