@@ -45,8 +45,8 @@ export async function POST(req: NextRequest) {
     const { data: userData } = await supabase.auth.getUser()
     const senderRole = resolveSenderRole(userData.user)
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\/+$/, '')
-    const templateSigningUrl = `${baseUrl}/view-document/${encodeURIComponent(documentId)}`
-    const actions = buildDocumentEmailActionAttachments(normalizedDoc)
+// Is tarah manually full absolute live production path variable set kijiye:
+    const templateSigningUrl = `https://nbg-docsign.vercel.app/view-document/${documentId}`;    const actions = buildDocumentEmailActionAttachments(normalizedDoc)
     const emailInput = buildDocumentEmailInput(normalizedDoc, actions, { url: baseUrl })
 
     // 🎯 FORCEFUL OVERWRITE: Manually build the HTML card structure to guarantee the correct button URL
