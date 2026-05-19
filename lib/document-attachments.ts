@@ -1,7 +1,7 @@
 import { DOCUMENT_TYPE_LABELS } from './document-catalog'
 import { normalizeDocument } from './document-normalize'
 import { Document } from './types'
-import { buildDocumentPdfUrl, buildDocumentTrackUrl, buildDocumentViewUrl } from './app-url'
+import { buildDocumentPdfUrl, buildDocumentViewUrl } from './app-url'
 import type { NextRequest } from 'next/server'
 
 type DocumentEmailUrlSource = Pick<NextRequest, 'url' | 'headers'> | {
@@ -160,13 +160,13 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
   const normalizedDoc = normalizeDocument(doc)
   const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
   const isAgreement = normalizedDoc.type === 'agreement'
-  const actionUrl = buildDocumentActionUrl(normalizedDoc.id, normalizedDoc.signing_token, normalizedDoc.type, source)
+  const actionUrl = buildDocumentActionUrl(normalizedDoc.id, normalizedDoc.type, source)
   const documentActions = attachments
     .filter(attachment => attachment.documentId && attachment.signingToken)
     .map(attachment => ({
       label: attachment.docLabel || attachment.docType || docLabel,
       filename: attachment.filename,
-      url: buildDocumentActionUrl(attachment.documentId!, attachment.signingToken!, attachment.docType, source),
+      url: buildDocumentActionUrl(attachment.documentId!, attachment.docType, source),
       isAgreement: attachment.docType === 'agreement',
     }))
   const subject = isAgreement
@@ -203,8 +203,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
   }
 }
 
-function buildDocumentActionUrl(documentId: string, signingToken?: string, type?: Document['type'], source?: DocumentEmailUrlSource) {
-  if (signingToken) return buildDocumentTrackUrl(signingToken, source)
+function buildDocumentActionUrl(documentId: string, type?: Document['type'], source?: DocumentEmailUrlSource) {
   return type === 'agreement' ? buildDocumentViewUrl(documentId, source) : buildDocumentPdfUrl(documentId, source)
 }
 
