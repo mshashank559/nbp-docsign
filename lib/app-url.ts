@@ -19,6 +19,11 @@ export function buildDocumentViewUrl(documentId: string, source?: UrlSource) {
   return preciseCandidateLink
 }
 
+export function buildDocumentTrackUrl(signingToken: string, source?: UrlSource) {
+  const safeSigningToken = encodeURIComponent(String(signingToken || 'missing-token'))
+  return `${resolveAppUrl(source)}/api/documents/track/${safeSigningToken}`
+}
+
 export function buildDocumentPdfUrl(documentId: string, source?: UrlSource) {
   const safeDocumentId = encodeURIComponent(String(documentId || 'missing-document'))
   return `${resolveAppUrl(source)}/view-document/${safeDocumentId}`

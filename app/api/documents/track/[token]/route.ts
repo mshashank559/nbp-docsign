@@ -6,7 +6,12 @@ import { getTrackedDocumentPath, recordEmailDocumentClick } from '@/lib/document
 import { resolveAppUrl } from '@/lib/app-url'
 
 
-export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ token: string }> | { token: string } },
+) {
+  const resolvedParams = await params
+  const token = decodeURIComponent(String(resolvedParams.token || ''))
   let supabase
   try {
     supabase = serviceClient()
@@ -16,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   const { data, error } = await supabase
     .from('documents')
     .select('*')
-    .eq('signing_token', params.token)
+    .eq('signing_token', token)
     .single()
 
   const appUrl = resolveAppUrl(req)
@@ -26,7 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: { token: strin
   }
 
   const doc = normalizeDocument(data as Document)
-  await recordEmailDocumentClick(supabase, req, doc, { token: params.token })
+  await recordEmailDocumentClick(supabase, req, doc, { token })
 
   return NextResponse.redirect(new URL(getTrackedDocumentPath(doc), appUrl))
 }
