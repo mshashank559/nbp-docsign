@@ -35,16 +35,17 @@ export async function POST(req: NextRequest) {
 
     const document = normalizeDocument(data as Document)
     const { doc, childDocs, documentIds } = await prepareTrackedBundleDocuments(supabase, document)
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL
-    const templateSigningUrl = `${baseUrl}/view-document/${doc.id}`
+    const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_APP_URL) || DEFAULT_APP_URL
+    const targetLink = `${baseUrl}/view-document/${doc.id}`
     const attachments = buildDocumentEmailActionAttachments(doc, childDocs)
 
     if (!attachments.length) {
       return NextResponse.json({ ok: false, error: 'No document actions could be prepared' }, { status: 400 })
     }
 
+    const emailSource = { url: baseUrl }
     const emailInput = {
-      ...buildDocumentEmailInput(doc, attachments, req),
+      ...buildDocumentEmailInput(doc, attachments, emailSource),
       senderDisplayName:
         senderRole === 'HR'
           ? 'NetBounce HR'
@@ -53,8 +54,8 @@ export async function POST(req: NextRequest) {
           : 'NetBounce Placement LLC',
     }
 
-    const html = normalizeTemplateSigningUrl(emailInput.html || '', doc.id, templateSigningUrl)
-    const text = normalizeTemplateSigningUrl(emailInput.text, doc.id, templateSigningUrl)
+    const html = emailInput.html || ''
+    const text = emailInput.text
     const mailResult = await sendSmtpHtmlMessage({
       to: emailInput.to,
       senderDisplayName: emailInput.senderDisplayName,
@@ -99,6 +100,7 @@ export async function POST(req: NextRequest) {
         sent_from: emailInput.senderDisplayName,
         smtp_message_id: mailResult.messageId,
         mode: 'smtp-html-email-transmitter',
+        target_link: targetLink,
       },
     })
 
@@ -111,6 +113,8 @@ export async function POST(req: NextRequest) {
       ok: true,
       success: true,
       message: 'HTML card sent directly to recipient mailbox',
+      mode: 'smtp-html-email-transmitter',
+      targetLink,
     })
   } catch (error) {
     console.error('[send-signing-email] Failed to dispatch rich HTML email template', error)
@@ -219,12 +223,14 @@ function envValue(key: string) {
   return (process.env[key] || '').trim().replace(/^['"]|['"]$/g, '')
 }
 
-function normalizeTemplateSigningUrl(value: string, documentId: string, templateSigningUrl: string) {
-  const safeDocumentId = encodeURIComponent(documentId)
-  return String(value || '').replace(
-    new RegExp(`https?://[^\\s"'<>]+/view-document/${safeDocumentId}`, 'g'),
-    templateSigningUrl,
-  )
+function normalizeBaseUrl(value?: string | null) {
+  const trimmed = String(value || '').trim().replace(/^['"]|['"]$/g, '')
+  if (!trimmed) return ''
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    return trimmed.replace(/\/+$/, '')
+  }
 }
 
 async function prepareTrackedBundleDocuments(supabase: any, doc: Document) {

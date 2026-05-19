@@ -4,6 +4,13 @@ import { Document } from './types'
 import { buildDocumentPdfUrl, buildDocumentViewUrl } from './app-url'
 import type { NextRequest } from 'next/server'
 
+type DocumentEmailUrlSource = Pick<NextRequest, 'url' | 'headers'> | {
+  url?: string
+  headers?: {
+    get(name: string): string | null
+  }
+}
+
 export type StoredAttachment = {
   id: string
   name: string
@@ -149,7 +156,7 @@ export function buildDocumentEmailActionAttachments(doc: Document, bundleDocumen
   return actions.filter(action => action.documentId && action.signingToken)
 }
 
-export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachment[], source?: NextRequest): DocumentEmailInput {
+export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachment[], source?: DocumentEmailUrlSource): DocumentEmailInput {
   const normalizedDoc = normalizeDocument(doc)
   const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
   const isAgreement = normalizedDoc.type === 'agreement'
@@ -196,7 +203,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
   }
 }
 
-function buildDocumentActionUrl(documentId: string, type?: Document['type'], source?: NextRequest) {
+function buildDocumentActionUrl(documentId: string, type?: Document['type'], source?: DocumentEmailUrlSource) {
   return type === 'agreement' ? buildDocumentViewUrl(documentId, source) : buildDocumentPdfUrl(documentId, source)
 }
 
