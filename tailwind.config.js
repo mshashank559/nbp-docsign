@@ -1,28 +1,29 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ['./app/**/*.{js,ts,jsx,tsx}', './components/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        /* Brand greens */
+        /* NetBounce brand blues / navy */
         brand: {
-          950: '#050e08',
-          900: '#0D1F14',
-          800: '#1A3C28',
-          700: '#2D5A3D',
-          600: '#3B7A52',
-          200: '#A8D5B8',
-          100: '#D4EFE0',
-          50:  '#F0FAF4',
+          950: '#02030f',
+          900: '#080e2e',
+          800: '#0f1850',
+          700: '#1a2a78',
+          600: '#1E3AFA',
+          200: '#a5b4fc',
+          100: '#dde2ff',
+          50:  '#eef2ff',
         },
         /* Semantic design tokens */
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
-        card:       'var(--card)',
+        background: 'var(--page-bg)',
+        foreground: 'var(--text-1)',
+        card:       'var(--surface)',
         surface:    'var(--surface)',
         border:     'var(--border)',
-        secondary:  'var(--secondary)',
-        muted:      'var(--muted)',
+        secondary:  'var(--text-2)',
+        muted:      'var(--text-3)',
       },
       fontFamily: {
         sans: ['Inter', 'Arial', 'Helvetica', 'sans-serif'],

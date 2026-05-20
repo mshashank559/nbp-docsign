@@ -41,9 +41,5 @@ export default async function PublicDocumentViewPage({ params }: { params: Promi
   if (!documentRecord) notFound()
 
   const doc = normalizeDocument(documentRecord as Document)
-  if (!requiresSignatureDocument(doc)) {
-    redirect(`/api/download-pdf?id=${encodeURIComponent(doc.id)}`)
-  }
-
   return <PublicSigningWizard doc={doc} />
 }

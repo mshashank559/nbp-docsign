@@ -16,11 +16,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!isAuthenticated) redirect('/login')
 
   return (
-    <div className="flex h-screen overflow-hidden bg-white dark:bg-brand-950 transition-colors">
-      {/* Sidebar is now a permanent part of the layout with no gaps[cite: 1] */}
+    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: 'var(--page-bg)' }}>
       <Sidebar />
-      
-      <main className="flex-1 relative overflow-y-auto">
+      <main className="flex-1 relative overflow-y-auto" style={{ background: 'var(--page-bg)' }}>
         {children}
       </main>
     </div>

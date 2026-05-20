@@ -8,6 +8,7 @@ import DocPreview from '@/components/preview/DocPreview'
 import NbgSignOff from '@/components/ui/NbgSignOff'
 import GeneratedEmailButton from '@/components/ui/GeneratedEmailButton'
 import DocumentActivityTracker from '@/components/ui/DocumentActivityTracker'
+import RealTimeClock from '@/components/ui/RealTimeClock'
 import { resolveAppUrl } from '@/lib/app-url'
 import { formatDistanceToNow, format } from 'date-fns'
 import clsx from 'clsx'
@@ -47,23 +48,26 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
       <div className="w-72 min-w-72 bg-card border-r border-border overflow-y-auto flex flex-col">
 
         {/* Back + title */}
-        <div className="p-5 border-b border-border">
-          <Link href="/dashboard" className="text-xs text-muted hover:text-secondary mb-3 flex items-center gap-1">
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M8 2L4 6l4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            All documents
-          </Link>
-          <div className="flex items-center gap-2 mb-2 mt-1">
+        <div style={{ padding: '14px 18px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <Link href="/dashboard" style={{ fontSize: 11.5, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none', fontWeight: 500 }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M8 2L4 6l4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              All documents
+            </Link>
+            <RealTimeClock />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
             <span className={clsx('text-xs font-bold px-2 py-0.5 rounded', `type-${doc.type}`)}>{doc.type}</span>
             <span className={clsx('text-xs font-medium px-2.5 py-0.5 rounded-full', STATUS_COLORS[doc.status])}>
               {STATUS_LABELS[doc.status]}
             </span>
           </div>
-          <h1 className="text-sm font-bold text-foreground leading-snug">
+          <h1 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', lineHeight: 1.35, margin: 0 }}>
             {DOCUMENT_TYPE_LABELS[doc.type] || doc.type}
           </h1>
-          <p className="text-xs text-muted mt-1">
+          <p style={{ fontSize: 11.5, color: 'var(--text-3)', marginTop: 3 }}>
             Created {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
           </p>
         </div>

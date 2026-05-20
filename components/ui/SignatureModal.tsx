@@ -19,6 +19,7 @@ interface Props {
 
 export default function SignatureModal({ name, onConfirm, onCancel }: Props) {
   const [mode,        setMode]        = useState<SigMode>('type')
+  const [typedName,   setTypedName]   = useState(name || 'Authorised Signatory')
   const [typedStyle,  setTypedStyle]  = useState(0)
   const [isDrawing,   setIsDrawing]   = useState(false)
   const [hasDrawn,    setHasDrawn]    = useState(false)
@@ -76,7 +77,7 @@ export default function SignatureModal({ name, onConfirm, onCancel }: Props) {
     ctx.font = `${style.style === 'italic' ? 'italic ' : ''}32px ${style.font}`
     ctx.fillStyle = '#0D1F14'
     ctx.textBaseline = 'middle'
-    ctx.fillText(name, 16, 44)
+    ctx.fillText(typedName || 'Authorised Signatory', 16, 44)
     return canvas.toDataURL()
   }
 
@@ -101,7 +102,7 @@ export default function SignatureModal({ name, onConfirm, onCancel }: Props) {
   }
 
   const canConfirm = mode === 'type'
-    ? name.trim().length > 0
+    ? typedName.trim().length > 0
     : mode === 'draw' ? hasDrawn : !!uploadedSrc
 
   return (
@@ -136,6 +137,14 @@ export default function SignatureModal({ name, onConfirm, onCancel }: Props) {
           {/* Type mode */}
           {mode === 'type' && (
             <div>
+              <p className="text-xs text-gray-400 mb-2">Type your name below</p>
+              <input
+                type="text"
+                value={typedName}
+                onChange={e => setTypedName(e.target.value)}
+                className="w-full px-4 py-2.5 mb-4 text-sm text-gray-800 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-brand-700 transition-colors"
+                placeholder="Type your name..."
+              />
               <p className="text-xs text-gray-400 mb-3">Select a style for your name</p>
               <div className="space-y-2">
                 {TYPED_STYLES.map((s, i) => (
@@ -153,7 +162,7 @@ export default function SignatureModal({ name, onConfirm, onCancel }: Props) {
                       fontSize: '22px',
                       color: '#0D1F14',
                     }}>
-                      {name || 'Your Name'}
+                      {typedName || 'Your Name'}
                     </span>
                   </button>
                 ))}

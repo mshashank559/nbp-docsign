@@ -2,7 +2,7 @@ import { DocType, Document } from './types'
 import { getEffectiveDocType } from './document-normalize'
 
 export const DOWNLOAD_ONLY_TYPES: DocType[] = ['review-agreement', 'pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt', 'confirmation']
-export const SIGNATURE_REQUIRED_TYPES: DocType[] = ['agreement']
+export const SIGNATURE_REQUIRED_TYPES: DocType[] = ['agreement', 'offer', 'appointment']
 
 export function isDownloadOnlyType(type: DocType) {
   return DOWNLOAD_ONLY_TYPES.includes(type)

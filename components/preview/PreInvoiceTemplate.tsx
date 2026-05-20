@@ -70,7 +70,7 @@ export default function PreInvoiceTemplate({ fields, clientName, clientEmail = '
             </InfoBlock>
           </section>
 
-          <section style={{ padding: '74px 54px 0' }}>
+          <section style={{ padding: '40px 54px 0' }}>
             <div
               style={{
                 display: 'grid',
@@ -95,7 +95,7 @@ export default function PreInvoiceTemplate({ fields, clientName, clientEmail = '
                 gridTemplateColumns: '1fr 1.25fr 0.58fr',
                 columnGap: 16,
                 padding: '13px 16px 0',
-                minHeight: 88,
+                minHeight: 56,
                 color: TEXT,
               }}
             >
@@ -127,11 +127,7 @@ export default function PreInvoiceTemplate({ fields, clientName, clientEmail = '
               <p style={commentStyle}>{v.termsCommentLine2}</p>
             </div>
 
-            <div style={{ paddingTop: 63 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center', marginBottom: 18 }}>
-                <span style={{ fontSize: 8 }}>Advance</span>
-                <span style={{ fontSize: 8, textAlign: 'center' }}>{v.advanceAmount}</span>
-              </div>
+            <div style={{ paddingTop: 28 }}>
               <div
                 style={{
                   display: 'grid',
@@ -321,7 +317,7 @@ const nameStyle: React.CSSProperties = { margin: '0 0 17px', fontSize: 16, fontW
 const valueStyle: React.CSSProperties = { margin: 0, fontSize: 16, color: TEXT }
 const smallLineStyle: React.CSSProperties = { margin: '0 0 5px', fontSize: 8.2, color: TEXT }
 const itemTextStyle: React.CSSProperties = { margin: 0, fontSize: 9.2, color: TEXT }
-const commentStyle: React.CSSProperties = { margin: 0, fontSize: 8.6, lineHeight: '12px', color: TEXT, fontWeight: 700 }
+const commentStyle: React.CSSProperties = { margin: 0, fontSize: 8.6, lineHeight: '12px', color: TEXT, fontWeight: 400 }
 const paymentStyle: React.CSSProperties = { margin: '0 0 4px', fontSize: 8.2, color: TEXT }
 const termsHeadingStyle: React.CSSProperties = { margin: '0 0 5px', fontSize: 8.2, color: TEXT }
 const termStyle: React.CSSProperties = { margin: '0 0 3px', fontSize: 7.4, lineHeight: '10px', color: TEXT }

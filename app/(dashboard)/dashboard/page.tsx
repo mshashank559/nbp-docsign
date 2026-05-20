@@ -16,6 +16,7 @@ import {
 } from '@/lib/rbac'
 import { useUserRole } from '@/lib/use-user-role'
 import { formatDistanceToNow } from 'date-fns'
+import RealTimeClock from '@/components/ui/RealTimeClock'
 
 const TYPE_LABELS: Record<string, string> = DOCUMENT_TYPE_LABELS
 const ACCOUNTS_DOC_TYPES = [...ACCOUNTS_DOC_TYPE_LABELS]
@@ -120,15 +121,18 @@ export default function DashboardPage() {
     <div style={{ padding: '28px 32px', maxWidth: '1100px', width: '100%' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '28px', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', gap: '16px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-1)', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Documents</h1>
           <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>{today}</p>
         </div>
-        <Link href="/dashboard/new" className="btn btn-primary" style={{ borderRadius: '12px', padding: '11px 20px', textDecoration: 'none', fontSize: '14px' }}>
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
-          New document
-        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <RealTimeClock />
+          <Link href="/dashboard/new" className="btn btn-primary" style={{ borderRadius: '12px', padding: '11px 20px', textDecoration: 'none', fontSize: '14px' }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="white" strokeWidth="2" strokeLinecap="round"/></svg>
+            New document
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}

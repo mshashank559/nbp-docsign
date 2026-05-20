@@ -355,6 +355,11 @@ function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, acti
                     <a href="${action.url}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 18px;border-radius:8px;white-space:nowrap">${action.isAgreement ? 'Review &amp; Sign Document' : `View ${escapeHtml(action.label)}`}</a>
                   </td>
                 </tr>
+                <tr>
+                  <td colspan="2" style="padding-top:8px;color:#6b7280;font-size:11px;line-height:1.4;word-break:break-all">
+                    Link: <a href="${action.url}" style="color:#2563eb;text-decoration:underline">${action.url}</a>
+                  </td>
+                </tr>
               </table>
             </td>
           </tr>`).join('')
@@ -375,6 +380,9 @@ function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, acti
           <table width="100%" cellpadding="0" cellspacing="0">
             ${rows || `<tr><td style="padding:16px 0;border-top:1px solid #e5e7eb"><a href="#" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px">View ${escapeHtml(docLabel)}</a></td></tr>`}
           </table>
+          <p style="margin:20px 0 0;color:#b91c1c;font-size:11.5px;line-height:1.5;font-weight:700;background:#fef2f2;border:1px solid #fee2e2;padding:10px;border-radius:8px">
+            ⚠️ Having trouble clicking the button? If this email landed in your Spam or Junk folder, please mark it as "Not Spam" or move it to your Inbox to make the button active. Alternatively, you can copy and paste the direct link listed under the document.
+          </p>
           <p style="margin:18px 0 0;color:#94a3b8;font-size:12px;line-height:1.5">Timestamps, IP address, and device details are recorded in the background for the final report.</p>
         </td></tr>
       </table>

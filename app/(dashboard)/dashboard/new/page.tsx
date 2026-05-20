@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AgreementPdfPreview from '@/components/preview/AgreementPdfPreview'
+import SignatureModal from '@/components/ui/SignatureModal'
 import DocPreview from '@/components/preview/DocPreview'
 import { DOCUMENT_TYPE_VALUES, DOCUMENT_TYPES, getDocumentMeta } from '@/lib/document-catalog'
 import { getLegacyDatabaseType } from '@/lib/document-normalize'
@@ -10,6 +11,7 @@ import { getAllowedDocTypes } from '@/lib/rbac'
 import { createClient } from '@/lib/supabase'
 import { DocType } from '@/lib/types'
 import { useUserRole } from '@/lib/use-user-role'
+import RealTimeClock from '@/components/ui/RealTimeClock'
 import {
   AGREEMENT_SECTIONS,
   APPOINTMENT_LETTER_SECTIONS,
@@ -83,6 +85,7 @@ export default function NewDocumentPage() {
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const [bundleError, setBundleError] = useState('')
   const [isMounted, setIsMounted] = useState(false)
+  const [sigModalOpen, setSigModalOpen] = useState(false)
   const allowedTypes = useMemo(() => getAllowedDocTypes(role), [role])
   const visibleDocumentTypes = useMemo(
     () => DOCUMENT_TYPES.filter(item => allowedTypes.includes(item.type)),
@@ -98,11 +101,48 @@ export default function NewDocumentPage() {
   const selectedDocumentCount = selectedDocuments.length
   const upd = (k: string, v: string) => {
     if (activeBundleDoc) {
-      setBundleDocs(prev => prev.map(doc => doc.id === activeBundleDoc.id ? { ...doc, fields: { ...doc.fields, [k]: v } } : doc))
+      setBundleDocs(prev => prev.map(doc => {
+        if (doc.id === activeBundleDoc.id) {
+          const nextFields = { ...doc.fields, [k]: v }
+          if (doc.type === 'pre-invoice' && k === 'pack_amount') {
+            nextFields['pending_amount'] = v
+            nextFields['advance_amount'] = ''
+          }
+          return { ...doc, fields: nextFields }
+        }
+        return doc
+      }))
     } else {
-      setFields(p => ({ ...p, [k]: v }))
+      setFields(p => {
+        const nextFields = { ...p, [k]: v }
+        if (docType === 'pre-invoice' && k === 'pack_amount') {
+          nextFields['pending_amount'] = v
+          nextFields['advance_amount'] = ''
+        }
+        return nextFields
+      })
     }
   }
+
+  useEffect(() => {
+    if (activeDocType === 'pre-invoice') {
+      const currentPack = activeFields['pack_amount'] || ''
+      const currentPending = activeFields['pending_amount'] || ''
+      const currentAdvance = activeFields['advance_amount'] || ''
+      if (currentPending !== currentPack || currentAdvance !== '') {
+        if (activeBundleDoc) {
+          setBundleDocs(prev => prev.map(doc => {
+            if (doc.id === activeBundleDoc.id) {
+              return { ...doc, fields: { ...doc.fields, pending_amount: currentPack, advance_amount: '' } }
+            }
+            return doc
+          }))
+        } else {
+          setFields(p => ({ ...p, pending_amount: currentPack, advance_amount: '' }))
+        }
+      }
+    }
+  }, [activeDocType, activeFields['pack_amount']])
 
   function sanitizeFieldsForInternalSave(type: DocType, input: Record<string, string>) {
     if (type === 'review-agreement') return {}
@@ -250,7 +290,8 @@ export default function NewDocumentPage() {
           <div style={{ width: '1px', height: '16px', background: 'var(--border)' }} />
           <h1 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-1)', margin: 0 }}>New Document</h1>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <RealTimeClock />
           {step !== 'type' && (
             <button onClick={saveDraft} disabled={saving} className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '10px' }}>
               {saving ? 'Saving...' : 'Save draft'}
@@ -355,6 +396,23 @@ export default function NewDocumentPage() {
                     {s.fields.map(k => {
                       const c = OPERATIONS_FIELD_CONFIG[k]
                       if (!c) return null
+                      if (k === 'priAuthoritySignatureImage') {
+                        return (
+                          <AuthoritySignatureInput
+                            key={k}
+                            label={c.label}
+                            value={activeFields[k] ?? ''}
+                            onOpen={() => setSigModalOpen(true)}
+                            onClear={() => upd(k, '')}
+                          />
+                        )
+                      }
+                      if (k === 'advance_amount' && activeDocType === 'pre-invoice') {
+                        return <DarkFieldInput key={k} label={c.label} value={activeFields[k] ?? ''} type="text" placeholder={c.placeholder} disabled onChange={() => {}} />
+                      }
+                      if (k === 'pending_amount' && activeDocType === 'pre-invoice') {
+                        return <DarkFieldInput key={k} label="Total Pending" value={activeFields['pack_amount'] ?? ''} type="text" disabled onChange={() => {}} />
+                      }
                       return <DarkFieldInput key={k} label={c.label} value={activeFields[k] ?? ''} type={c.type ?? 'text'} placeholder={c.placeholder} multiline={c.multiline} onChange={v => upd(k, v)} />
                     })}
                   </div>
@@ -414,6 +472,16 @@ export default function NewDocumentPage() {
           </div>
         )}
       </div>
+      {sigModalOpen && (
+        <SignatureModal
+          name="Authorised Signatory"
+          onConfirm={dataUrl => {
+            upd('priAuthoritySignatureImage', dataUrl)
+            setSigModalOpen(false)
+          }}
+          onCancel={() => setSigModalOpen(false)}
+        />
+      )}
     </div>
   )
 }
@@ -536,17 +604,18 @@ function FieldSection({ title, color }: { title: string; color: string }) {
   )
 }
 
-function DarkFieldInput({ label, value, type = 'text', placeholder, multiline, onChange }: { label: string; value: string; type?: string; placeholder?: string; multiline?: boolean; onChange: (v: string) => void }) {
+function DarkFieldInput({ label, value, type = 'text', placeholder, multiline, disabled, onChange }: { label: string; value: string; type?: string; placeholder?: string; multiline?: boolean; disabled?: boolean; onChange: (v: string) => void }) {
   const inputStyle: React.CSSProperties = {
     width: '100%',
-    background: 'rgba(255,255,255,0.07)',
+    background: disabled ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.07)',
     border: '1px solid rgba(255,255,255,0.1)',
     borderRadius: '8px',
-    color: 'white',
+    color: disabled ? 'rgba(255,255,255,0.35)' : 'white',
     fontSize: '12.5px',
     padding: '8px 10px',
     outline: 'none',
     fontFamily: 'inherit',
+    cursor: disabled ? 'not-allowed' : undefined,
   }
 
   return (
@@ -569,8 +638,30 @@ function DarkFieldInput({ label, value, type = 'text', placeholder, multiline, o
           />
         </div>
       ) : multiline
-        ? <textarea rows={3} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} style={{ ...inputStyle, resize: 'none' }} />
-        : <input type={type} value={value} placeholder={placeholder} onChange={e => onChange(e.target.value)} style={inputStyle} />}
+        ? <textarea rows={3} value={value} placeholder={placeholder} disabled={disabled} onChange={e => onChange(e.target.value)} style={{ ...inputStyle, resize: 'none' }} />
+        : <input type={type} value={value} placeholder={placeholder} disabled={disabled} onChange={e => onChange(e.target.value)} style={inputStyle} />}
+    </div>
+  )
+}
+
+function AuthoritySignatureInput({ label, value, onOpen, onClear }: { label: string; value: string; onOpen: () => void; onClear: () => void }) {
+  return (
+    <div style={{ padding: '4px 14px 8px' }}>
+      <label style={{ display: 'block', fontSize: '11px', fontWeight: 500, color: 'rgba(255,255,255,0.45)', marginBottom: '5px' }}>{label}</label>
+      {value && (
+        <div style={{ position: 'relative', marginBottom: 8 }}>
+          <img src={value} alt="Authority signature" style={{ maxWidth: '100%', maxHeight: 72, objectFit: 'contain', display: 'block', background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: 6 }} />
+          <button type="button" onClick={onClear} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(220,38,38,0.75)', border: 'none', borderRadius: '50%', color: 'white', width: 20, height: 20, cursor: 'pointer', fontSize: 13, lineHeight: '20px', textAlign: 'center', padding: 0 }}>×</button>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={onOpen}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: '8px', color: 'rgba(199,202,255,0.9)', fontSize: '12.5px', padding: '8px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
+      >
+        <span style={{ fontSize: 16 }}>✍</span>
+        <span>{value ? 'Change Signature' : 'Set Authority Signature'}</span>
+      </button>
     </div>
   )
 }

@@ -259,6 +259,18 @@ function SignaturePad({
     if (!value && signerName && !typedName.trim()) setTypedName(signerName)
   }, [signerName, typedName, value])
 
+  useEffect(() => {
+    if (method === 'type' && !disabled) {
+      const name = typedName.trim() || signerName.trim()
+      if (name) {
+        const dataUrl = createTypedSignature(name, typedFont.font)
+        onConfirm(dataUrl)
+      } else {
+        onClear()
+      }
+    }
+  }, [method, typedName, typedFont, signerName, disabled, onConfirm, onClear])
+
   function point(event: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current!
     const rect = canvas.getBoundingClientRect()

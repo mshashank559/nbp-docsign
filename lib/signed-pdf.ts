@@ -25,9 +25,12 @@ export async function buildSignedDocumentPdf(input: Document) {
   const x = (width * pos.x) / 100
   const y = height - (height * pos.y) / 100 - imageHeight
 
+  const drawX = doc.type === 'agreement' ? 390 : Math.min(width - imageWidth - 24, Math.max(24, x))
+  const drawY = doc.type === 'agreement' ? 420 : Math.min(height - imageHeight - 24, Math.max(24, y))
+
   page.drawImage(signature, {
-    x: Math.min(width - imageWidth - 24, Math.max(24, x)),
-    y: Math.min(height - imageHeight - 24, Math.max(24, y)),
+    x: drawX,
+    y: drawY,
     width: imageWidth,
     height: imageHeight,
   })
@@ -46,14 +49,14 @@ async function embedSignature(pdf: PDFDocument, dataUrl: string) {
 }
 
 function parseSignaturePosition(value: unknown) {
-  if (!value) return { x: 62, y: 72 }
+  if (!value) return { x: 68, y: 72 }
   try {
     const parsed = typeof value === 'string' ? JSON.parse(value) : value
     return {
-      x: Math.min(86, Math.max(4, Number(parsed?.x) || 62)),
+      x: Math.min(86, Math.max(4, Number(parsed?.x) || 68)),
       y: Math.min(88, Math.max(8, Number(parsed?.y) || 72)),
     }
   } catch {
-    return { x: 62, y: 72 }
+    return { x: 68, y: 72 }
   }
 }

@@ -27,3 +27,12 @@ pnpm-debug.log*
 
 # Ignore duplicate nested copy if present
 nbg-docsign-main/
+
+# Scratch & temporary scripts
+inspect-*.js
+drive_folder.html
+extracted_drive_files.json
+logo_*.png
+scratch/
+*.tsbuildinfo
+

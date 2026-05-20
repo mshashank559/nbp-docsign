@@ -9,63 +9,178 @@ export default function Sidebar({ docType, fields = {}, onChange }: any) {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const { role, email } = useUserRole()
 
+  // On mount, restore saved theme preference
   useEffect(() => {
-    if (isDarkMode) document.documentElement.classList.add('dark')
+    const saved = localStorage.getItem('nb-theme')
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const shouldDark = saved === 'dark' || (!saved && prefersDark)
+    setIsDarkMode(shouldDark)
+    if (shouldDark) document.documentElement.classList.add('dark')
     else document.documentElement.classList.remove('dark')
-  }, [isDarkMode])
+  }, [])
+
+  function toggleDark() {
+    const next = !isDarkMode
+    setIsDarkMode(next)
+    if (next) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('nb-theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('nb-theme', 'light')
+    }
+  }
 
   const NAV = [
-    { href: '/dashboard', label: 'Dashboard' },
-    { href: '/dashboard/new', label: 'New Document' },
-    { href: '/dashboard/settings', label: 'Settings' },
+    { href: '/dashboard', label: 'Dashboard', icon: 'grid' },
+    { href: '/dashboard/new', label: 'New Document', icon: 'plus' },
+    { href: '/dashboard/settings', label: 'Settings', icon: 'settings' },
   ]
 
+  const initials = email ? email.slice(0, 2).toUpperCase() : (role === 'HR' ? 'HR' : 'AC')
+
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-brand-900 border-r border-gray-200 dark:border-gray-800 w-72 shrink-0 z-20">
-      <div className="p-6 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-brand-900">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center overflow-hidden shrink-0">
-            <img src="/nb-logo.png" alt="NetBounce Placement logo" className="w-9 h-9 object-contain" />
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100%', width: 260, flexShrink: 0,
+      background: 'var(--sidebar-bg)', borderRight: '1px solid rgba(255,255,255,0.05)',
+      zIndex: 20, overflowY: 'auto',
+    }}>
+      {/* Logo / Brand */}
+      <div style={{
+        padding: '20px 20px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 42, height: 42, borderRadius: 12,
+            background: 'rgba(255,255,255,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, overflow: 'hidden',
+            boxShadow: '0 0 0 1px rgba(99,102,241,0.3)',
+          }}>
+            <img src="/nb-monogram.png" alt="NetBounce logo" style={{ width: 34, height: 34, objectFit: 'contain' }} />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-brand-900 dark:text-white leading-tight">DocSign</h1>
-            <p className="text-[10px] text-gray-500 uppercase font-medium">NetBounce Placement</p>
+            <div style={{ fontSize: 15, fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              DocSign
+            </div>
+            <div style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(255,255,255,0.38)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
+              NetBounce Placement
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-6 px-4">
-        <nav className="space-y-1">
-          {NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-all ${
-                pathname === item.href 
-                  ? "bg-blue-600 text-white shadow-md" 
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-              }`}
-            >
-              {item.label}
-            </Link>
-          ))}
+      {/* Navigation */}
+      <div style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
+        <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.22)', textTransform: 'uppercase', marginBottom: 8, paddingLeft: 8 }}>
+          Navigation
+        </div>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {NAV.map(item => {
+            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
+            return (
+              <Link key={item.href} href={item.href} style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '9px 12px', borderRadius: 10, textDecoration: 'none',
+                transition: 'all 0.14s',
+                background: isActive
+                  ? 'linear-gradient(135deg, rgba(30,58,250,0.85), rgba(99,102,241,0.7))'
+                  : 'transparent',
+                color: isActive ? '#ffffff' : 'rgba(255,255,255,0.55)',
+                fontWeight: isActive ? 700 : 500, fontSize: 13.5,
+                boxShadow: isActive ? '0 4px 16px rgba(30,58,250,0.35)' : 'none',
+              }}>
+                <NavIcon name={item.icon} />
+                {item.label}
+              </Link>
+            )
+          })}
         </nav>
       </div>
 
-      <div className="p-6 bg-white dark:bg-brand-900 border-t border-gray-100 dark:border-gray-800">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-[10px] font-bold text-gray-400 uppercase">Dark Mode</span>
-          <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-10 h-5 bg-gray-200 dark:bg-blue-900 rounded-full relative">
-            <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${isDarkMode ? 'left-6' : 'left-1'}`} />
+      {/* Bottom: theme toggle + user */}
+      <div style={{
+        padding: '14px 16px 18px',
+        borderTop: '1px solid rgba(255,255,255,0.07)',
+      }}>
+        {/* Dark mode toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14 }}>{isDarkMode ? '🌙' : '☀️'}</span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.45)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              {isDarkMode ? 'Dark' : 'Light'}
+            </span>
+          </div>
+          <button
+            onClick={toggleDark}
+            aria-label="Toggle dark mode"
+            style={{
+              width: 44, height: 24, borderRadius: 12,
+              background: isDarkMode
+                ? 'linear-gradient(135deg, #1E3AFA, #8b5cf6)'
+                : 'rgba(255,255,255,0.18)',
+              border: 'none', cursor: 'pointer', position: 'relative',
+              transition: 'all 0.25s',
+              boxShadow: isDarkMode ? '0 2px 10px rgba(30,58,250,0.5)' : 'none',
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: 3, width: 18, height: 18,
+              borderRadius: '50%', background: '#ffffff',
+              transition: 'all 0.25s cubic-bezier(0.34,1.56,0.64,1)',
+              left: isDarkMode ? 23 : 3,
+              boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+            }} />
           </button>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-50 text-blue-800 rounded-full flex items-center justify-center text-[10px] font-bold">{role === 'HR' ? 'HR' : 'AC'}</div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-brand-900 dark:text-white truncate">{email || 'Signed in user'}</p>
+
+        {/* User info */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(135deg, #1E3AFA, #8b5cf6)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 11, fontWeight: 800, color: '#fff',
+            boxShadow: '0 3px 10px rgba(30,58,250,0.4)',
+          }}>
+            {initials}
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ fontSize: 11.5, fontWeight: 700, color: 'rgba(255,255,255,0.9)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {email || 'Signed in'}
+            </p>
+            <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', margin: '1px 0 0', fontWeight: 500 }}>
+              {role === 'HR' ? 'HR Manager' : 'Accounts'}
+            </p>
           </div>
         </div>
       </div>
     </div>
   )
+}
+
+function NavIcon({ name }: { name: string }) {
+  const s: React.CSSProperties = { width: 16, height: 16, flexShrink: 0 }
+  if (name === 'grid') return (
+    <svg style={s} viewBox="0 0 16 16" fill="none">
+      <rect x="1" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <rect x="9" y="1" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <rect x="1" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+      <rect x="9" y="9" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.3"/>
+    </svg>
+  )
+  if (name === 'plus') return (
+    <svg style={s} viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M8 5v6M5 8h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    </svg>
+  )
+  if (name === 'settings') return (
+    <svg style={s} viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.3"/>
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.05 3.05l1.41 1.41M11.54 11.54l1.41 1.41M3.05 12.95l1.41-1.41M11.54 4.46l1.41-1.41" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+    </svg>
+  )
+  return null
 }

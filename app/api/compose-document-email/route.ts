@@ -45,27 +45,39 @@ export async function POST(req: NextRequest) {
     const { data: userData } = await supabase.auth.getUser()
     const senderRole = resolveSenderRole(userData.user)
     const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || DEFAULT_APP_URL).replace(/\/+$/, '')
-// Is tarah manually full absolute live production path variable set kijiye:
-    const templateSigningUrl = `https://nbg-docsign.vercel.app/view-document/${documentId}`;    const actions = buildDocumentEmailActionAttachments(normalizedDoc)
+    const templateSigningUrl = `${baseUrl}/view-document/${documentId}`;
+    const actions = buildDocumentEmailActionAttachments(normalizedDoc)
     const emailInput = buildDocumentEmailInput(normalizedDoc, actions, { url: baseUrl })
 
     // 🎯 FORCEFUL OVERWRITE: Manually build the HTML card structure to guarantee the correct button URL
     const docTypeLabel = normalizedDoc.type ? normalizedDoc.type.charAt(0).toUpperCase() + normalizedDoc.type.slice(1) : 'Document'
+    const isSignedDoc = ['agreement', 'offer', 'appointment'].includes(normalizedDoc.type)
+    const headerText = isSignedDoc ? 'Review and sign required' : 'Review document'
+    const bodyText = isSignedDoc
+      ? 'Please use the button beside each document below. Each button records activity only for that specific document before opening the correct view or signing page.'
+      : 'Please use the button below to review your document. You can read and download it directly.'
+    const buttonText = isSignedDoc ? 'Review & Sign Document' : 'Review Document'
     
     emailInput.html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #0b2512; color: #ffffff; padding: 20px; text-align: left;">
           <h3 style="margin: 0; color: #4caf50; font-size: 14px;">NetBounce DocSign</h3>
-          <h2 style="margin: 5px 0 0 0; font-size: 20px; font-weight: normal;">Review and sign required</h2>
+          <h2 style="margin: 5px 0 0 0; font-size: 20px; font-weight: normal;">${headerText}</h2>
         </div>
         <div style="padding: 24px; color: #333333; line-height: 1.6;">
           <p>Hello ${normalizedDoc.client_name || 'Candidate'},</p>
-          <p>Please use the button beside each document below. Each button records activity only for that specific document before opening the correct view or signing page.</p>
+          <p>${bodyText}</p>
           
-          <div style="margin: 30px 0; display: flex; justify-content: space-between; align-items: center; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #e5e7eb;">
-            <span style="font-weight: bold; font-size: 15px; color: #111827;">${docTypeLabel}</span>
-            <a href="${templateSigningUrl}" style="background-color: #111827; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: bold; display: inline-block;">Review & Sign Document</a>
-          </div>
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #f9f9f9; border: 1px solid #e5e7eb; border-radius: 6px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 15px; font-weight: bold; font-size: 15px; color: #111827; vertical-align: middle; text-align: left;">
+                ${docTypeLabel}
+              </td>
+              <td style="padding: 15px; vertical-align: middle; text-align: right; width: 1%; white-space: nowrap;">
+                <a href="${templateSigningUrl}" style="background-color: #111827; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: bold; display: inline-block; white-space: nowrap;">${buttonText}</a>
+              </td>
+            </tr>
+          </table>
           
           <p style="font-size: 12px; color: #666666; margin-top: 40px; border-top: 1px solid #eeeeee; padding-top: 10px;">Timestamps, IP address, and device details are recorded in the background for the final report.</p>
         </div>

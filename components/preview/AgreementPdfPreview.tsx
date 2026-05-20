@@ -87,8 +87,7 @@ export default function AgreementPdfPreview({
         style={{
           width: '794px',
           maxWidth: 'calc(100% - 32px)',
-          height: 'calc(100vh - 180px)',
-          minHeight: '720px',
+          aspectRatio: '1 / 1.4142',
           margin: '0 auto',
           background: 'white',
           boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
@@ -118,37 +117,21 @@ function CandidateSignatureBlock({ signature }: { signature: string }) {
     <div
       style={{
         position: 'absolute',
-        right: 56,
-        bottom: 76,
+        left: '68%',
+        bottom: '25%',
         zIndex: 2,
-        width: 160,
-        minHeight: 80,
+        width: 150,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'flex-end',
-        textAlign: 'center',
         pointerEvents: 'none',
       }}
     >
       <img
         src={signature}
         alt="Candidate Signature"
-        style={{ width: 128, height: 48, objectFit: 'contain', marginBottom: 8 }}
+        style={{ width: 128, height: 48, objectFit: 'contain' }}
       />
-      <p
-        style={{
-          width: 128,
-          margin: 0,
-          borderTop: '1px solid #9ca3af',
-          paddingTop: 4,
-          color: '#4b5563',
-          fontSize: 12,
-          fontWeight: 700,
-        }}
-      >
-        Candidate Signature
-      </p>
     </div>
   )
 }

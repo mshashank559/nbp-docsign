@@ -5,6 +5,7 @@ import { normalizeDocument } from '@/lib/document-normalize'
 import { insertAuditEvent } from '@/lib/audit'
 import { buildSignedDocumentPdf } from '@/lib/signed-pdf'
 import { Document } from '@/lib/types'
+import { sendGmailMessage, getSenderEmail } from '@/lib/gmail'
 
 const nodemailer = require('nodemailer') as any
 
@@ -105,7 +106,7 @@ export async function POST(req: NextRequest) {
   })
 
   if (!emailResult.ok) {
-    console.error('[document/sign] signed document email delivery failed', emailResult)
+    console.warn('[document/sign] signed document email delivery failed (non-blocking fallback)', emailResult)
     await supabase.from('audit_trail').insert({
       document_id: doc.id,
       event: 'Signed document email delivery failed',
@@ -116,9 +117,10 @@ export async function POST(req: NextRequest) {
       },
     })
     return NextResponse.json({
-      error: 'Database updated, but email transmission failed.',
-      details: emailResult.error,
-    }, { status: 502 })
+      ok: true,
+      document: signedDoc,
+      warning: 'Your signature has been saved successfully. Email delivery was skipped.',
+    })
   }
 
   console.log('[document/sign] signed document copies emailed', { documentId: doc.id, recipients: emailResult.recipients })
@@ -151,41 +153,95 @@ async function sendSignedCopies({
   signedPdf: Buffer
   filename: string
 }) {
+  const signedTime = formatDateTime(signedAt)
+  const gmailSender = getSenderEmail()
+  const teamRecipient = process.env.SIGNED_DOC_TEAM_TO || gmailSender
+  const recipients = [teamRecipient, doc.client_email].filter(Boolean)
+
+  console.log('[document/sign] preparing email delivery', {
+    candidateRecipient: doc.client_email,
+    teamRecipient,
+    gmailSender,
+  })
+
+  // Try Gmail API first if it is configured
+  const hasGmailConfig = process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN
+  if (hasGmailConfig) {
+    try {
+      console.log('[document/sign] sending via Gmail API...')
+
+      // Send to candidate
+      const candidateEmailResult = await sendGmailMessage({
+        to: doc.client_email,
+        senderDisplayName: 'NetBounce Placement',
+        subject: `Executed Copy: Your Signed ${docLabel}`,
+        text: `Hello ${doc.client_name},\n\nPlease find attached the final executed copy of your ${docLabel} for your records.`,
+        html: buildCandidateEmailHtml(doc, docLabel, signedTime),
+        attachments: [
+          {
+            filename,
+            contentType: 'application/pdf',
+            content: signedPdf,
+          },
+        ],
+      })
+
+      if (!candidateEmailResult.ok) {
+        throw new Error(`Gmail API failed to send to candidate: ${candidateEmailResult.reason}`)
+      }
+
+      console.log('[document/sign] Gmail API successfully sent to candidate')
+
+      // Send to team
+      if (teamRecipient) {
+        const teamEmailResult = await sendGmailMessage({
+          to: teamRecipient,
+          senderDisplayName: 'NetBounce Placement',
+          subject: `[COMPLETED] ${docLabel} Signed - ${doc.client_name}`,
+          text: `The candidate ${doc.client_name} has successfully executed the ${docLabel}.\nThe final signed PDF is attached to this email for administrative filing.`,
+          html: buildTeamEmailHtml(doc, docLabel, signedTime),
+          attachments: [
+            {
+              filename,
+              contentType: 'application/pdf',
+              content: signedPdf,
+            },
+          ],
+        })
+        if (!teamEmailResult.ok) {
+          console.warn('[document/sign] Gmail API failed to send copy to team:', teamEmailResult.reason)
+        } else {
+          console.log('[document/sign] Gmail API successfully sent to team desk')
+        }
+      }
+
+      return { ok: true as const, recipients }
+    } catch (gmailError: any) {
+      console.error('[document/sign] Gmail API delivery failed, trying SMTP fallback...', gmailError)
+    }
+  }
+
+  // Fallback to SMTP
   const smtpHost = process.env.SMTP_HOST
   const smtpPort = Number(process.env.SMTP_PORT)
   const smtpUser = process.env.SMTP_USER
   const smtpPass = process.env.SMTP_PASS
-  const teamRecipient = process.env.SIGNED_DOC_TEAM_TO || smtpUser
-  const recipients = [teamRecipient, doc.client_email].filter(Boolean)
-  console.log('[document/sign] preparing SMTP transport', {
-    host: smtpHost || 'MISSING',
-    port: smtpPort,
-    from: smtpUser || 'MISSING',
-    teamRecipient: teamRecipient || 'MISSING',
-    candidateRecipient: doc.client_email,
-  })
 
   if (!smtpHost || !Number.isFinite(smtpPort) || !smtpUser || !smtpPass) {
-    console.error('[document/sign] SMTP configuration missing', {
-      hasHost: Boolean(smtpHost),
-      hasPort: Number.isFinite(smtpPort),
-      hasUser: Boolean(smtpUser),
-      hasPass: Boolean(smtpPass),
-    })
-    return { ok: false as const, error: 'SMTP is not configured.', recipients }
+    console.error('[document/sign] SMTP configuration also missing')
+    return { ok: false as const, error: 'Gmail API and SMTP are not configured.', recipients }
   }
 
   try {
     const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT),
+      host: smtpHost,
+      port: smtpPort,
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: smtpUser,
+        pass: smtpPass,
       },
     })
 
-    const signedTime = formatDateTime(signedAt)
     const emailAttachments = [
       {
         filename,
@@ -194,7 +250,7 @@ async function sendSignedCopies({
       },
     ]
 
-    console.log('[document/sign] sending executed PDF to candidate', { to: doc.client_email, filename, bytes: signedPdf.length })
+    console.log('[document/sign] sending executed PDF to candidate via SMTP', { to: doc.client_email })
     await transporter.sendMail({
       from: `"NetBounce Placement" <${smtpUser}>`,
       to: doc.client_email,
@@ -203,25 +259,25 @@ async function sendSignedCopies({
       html: buildCandidateEmailHtml(doc, docLabel, signedTime),
       attachments: emailAttachments,
     })
-    console.log('[document/sign] executed PDF successfully sent to candidate', { to: doc.client_email })
 
-    console.log('[document/sign] sending executed PDF to NetBounce office desk', { to: teamRecipient, filename, bytes: signedPdf.length })
-    await transporter.sendMail({
-      from: `"NetBounce Placement" <${smtpUser}>`,
-      to: teamRecipient,
-      subject: `[COMPLETED] ${docLabel} Signed - ${doc.client_name}`,
-      text: `The candidate ${doc.client_name} has successfully executed the ${docLabel}.\nThe final signed PDF is attached to this email for administrative filing.`,
-      html: buildTeamEmailHtml(doc, docLabel, signedTime),
-      attachments: emailAttachments,
-    })
-    console.log('[document/sign] executed PDF successfully sent to NetBounce office desk', { to: teamRecipient })
+    if (teamRecipient) {
+      console.log('[document/sign] sending executed PDF to NetBounce office desk via SMTP', { to: teamRecipient })
+      await transporter.sendMail({
+        from: `"NetBounce Placement" <${smtpUser}>`,
+        to: teamRecipient,
+        subject: `[COMPLETED] ${docLabel} Signed - ${doc.client_name}`,
+        text: `The candidate ${doc.client_name} has successfully executed the ${docLabel}.\nThe final signed PDF is attached to this email for administrative filing.`,
+        html: buildTeamEmailHtml(doc, docLabel, signedTime),
+        attachments: emailAttachments,
+      })
+    }
 
     return { ok: true as const, recipients }
-  } catch (error) {
-    console.error('[document/sign] SMTP Transporter execution failed inside post-sign routing:', error)
+  } catch (smtpError: any) {
+    console.error('[document/sign] SMTP execution failed:', smtpError)
     return {
       ok: false as const,
-      error: error instanceof Error ? error.message : 'SMTP delivery failed.',
+      error: smtpError instanceof Error ? smtpError.message : 'SMTP delivery failed.',
       recipients,
     }
   }

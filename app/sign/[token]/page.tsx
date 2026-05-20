@@ -23,7 +23,7 @@ export default function SignPage({ params }: { params: { token: string } }) {
   const [title, setTitle] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [agreed, setAgreed] = useState(false)
-  const [signaturePosition, setSignaturePosition] = useState({ x: 62, y: 72 })
+  const [signaturePosition, setSignaturePosition] = useState({ x: 68, y: 72 })
 
   useEffect(() => {
     async function loadDoc() {
@@ -52,7 +52,8 @@ export default function SignPage({ params }: { params: { token: string } }) {
   }, [params.token, router, searchParams])
 
   async function handleApprove() {
-    if (!doc || !signature || !agreed) return
+    const isSignedDoc = ['agreement', 'offer', 'appointment'].includes(doc?.type || '')
+    if (!doc || (isSignedDoc && !signature) || !agreed) return
     setSubmitting(true)
     setError('')
 
@@ -61,7 +62,7 @@ export default function SignPage({ params }: { params: { token: string } }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         token: params.token,
-        signature,
+        signature: signature || 'reviewed',
         signatoryName: name,
         signatoryTitle: title,
         agreementAddress: address,
@@ -105,6 +106,7 @@ export default function SignPage({ params }: { params: { token: string } }) {
 
   if (!doc) return null
   const isAgreement = doc.type === 'agreement'
+  const isSignedDoc = ['agreement', 'offer', 'appointment'].includes(doc.type)
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
@@ -116,8 +118,8 @@ export default function SignPage({ params }: { params: { token: string } }) {
       <div className="flex flex-1 overflow-hidden">
         <div className="w-72 min-w-72 bg-white border-r border-gray-100 overflow-y-auto flex flex-col no-print">
           <div className="p-6 border-b border-gray-100">
-            <h2 className="text-base font-bold text-gray-900 mb-1">Your signature required</h2>
-            <p className="text-xs text-gray-500">Review the full document, place your signature, then submit.</p>
+            <h2 className="text-base font-bold text-gray-900 mb-1">{isSignedDoc ? 'Your signature required' : 'Review Document'}</h2>
+            <p className="text-xs text-gray-500">{isSignedDoc ? 'Review the full document, place your signature, then submit.' : 'Please review the document details on the right. Once read, check the box below and complete the review.'}</p>
           </div>
           <div className="p-6 flex-1">
             <div className="space-y-4 mb-6">
@@ -135,24 +137,28 @@ export default function SignPage({ params }: { params: { token: string } }) {
                   <input type="tel" value={contact} onChange={e => setContact(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-700" placeholder="Your contact number" />
                 </div>
               </>}
-              {!isAgreement && <div>
+              {!isAgreement && isSignedDoc && <div>
                 <label className="block text-xs font-medium text-gray-900 mb-1.5">Title / designation <span className="text-red-400">*</span></label>
                 <input type="text" value={title} onChange={e => setTitle(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-700" placeholder="e.g. Owner, Partner" />
               </div>}
             </div>
-            <p className="text-xs font-medium text-gray-900 mb-2">{isAgreement ? 'Custom Sign' : 'Your signature'} <span className="text-red-400">*</span></p>
-            <div onClick={() => setShowModal(true)} className="w-full border-2 border-dashed border-gray-200 rounded-xl p-4 mb-5 cursor-pointer hover:border-brand-300 transition-colors min-h-20 flex items-center justify-center">
-              {signature ? <img src={signature} alt="signature" className="max-h-16 max-w-full" /> : <div className="text-center"><p className="text-gray-300 text-sm mb-1">Click to add signature</p><p className="text-gray-200 text-xs">Type name, draw, or upload</p></div>}
-            </div>
+            {isSignedDoc && (
+              <>
+                <p className="text-xs font-medium text-gray-900 mb-2">{isAgreement ? 'Custom Sign' : 'Your signature'} <span className="text-red-400">*</span></p>
+                <div onClick={() => setShowModal(true)} className="w-full border-2 border-dashed border-gray-200 rounded-xl p-4 mb-5 cursor-pointer hover:border-brand-300 transition-colors min-h-20 flex items-center justify-center">
+                  {signature ? <img src={signature} alt="signature" className="max-h-16 max-w-full" /> : <div className="text-center"><p className="text-gray-300 text-sm mb-1">Click to add signature</p><p className="text-gray-200 text-xs">Type name, draw, or upload</p></div>}
+                </div>
+              </>
+            )}
             <label className="flex items-start gap-2.5 mb-5 cursor-pointer">
               <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} className="mt-0.5 accent-brand-700" />
-              <span className="text-xs text-gray-500 leading-relaxed">I have read and agree to the terms of this document. I understand this constitutes a legally binding electronic signature.</span>
+              <span className="text-xs text-gray-500 leading-relaxed">{isSignedDoc ? 'I have read and agree to the terms of this document. I understand this constitutes a legally binding electronic signature.' : 'I have reviewed and downloaded this document.'}</span>
             </label>
-            <button onClick={handleApprove} disabled={!signature || !name || (isAgreement && (!address || !contact)) || (!isAgreement && !title) || !agreed || submitting} className="w-full bg-brand-900 text-white py-3 rounded-xl text-sm font-bold hover:bg-brand-800 disabled:opacity-40 transition-colors">
-              {submitting ? 'Submitting...' : 'Submit signed document'}
+            <button onClick={handleApprove} disabled={(isSignedDoc && !signature) || !name || (isAgreement && (!address || !contact)) || (!isAgreement && isSignedDoc && !title) || !agreed || submitting} className="w-full bg-brand-900 text-white py-3 rounded-xl text-sm font-bold hover:bg-brand-800 disabled:opacity-40 transition-colors">
+              {submitting ? 'Submitting...' : (isSignedDoc ? 'Submit signed document' : 'Complete Review')}
             </button>
             {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
-            <p className="text-xs text-gray-400 leading-relaxed mt-3">Drag the signature on the document preview to place it where you want it before submitting.</p>
+            {isSignedDoc && <p className="text-xs text-gray-400 leading-relaxed mt-3">Drag the signature on the document preview to place it where you want it before submitting.</p>}
           </div>
         </div>
         <div id="signing-document-scroll" className="flex-1 overflow-y-auto relative">
@@ -160,20 +166,19 @@ export default function SignPage({ params }: { params: { token: string } }) {
             <AgreementPdfPreview
               fields={{ ...doc.fields, agreementName: name, agreementAddress: address, agreementContact: contact, receivingSignatoryName: name }}
               clientName={doc.client_name}
-              clientSignature={signature ?? undefined}
               onSignatureClick={() => setShowModal(true)}
             />
           ) : (
-            <DocPreview type={doc.type} fields={{ ...doc.fields, receivingSignatoryName: name, receivingSignatoryTitle: title }} clientName={doc.client_name} nbgSignature={doc.nbg_signature ?? undefined} clientSignature={signature ?? undefined} readOnly onSignatureClick={() => setShowModal(true)} />
+            <DocPreview type={doc.type} fields={{ ...doc.fields, receivingSignatoryName: name, receivingSignatoryTitle: title }} clientName={doc.client_name} nbgSignature={doc.nbg_signature ?? undefined} readOnly onSignatureClick={() => setShowModal(true)} />
           )}
-          {signature && (
+          {isSignedDoc && signature && (
             <DraggableSignature
               src={signature}
               position={signaturePosition}
               onChange={setSignaturePosition}
             />
           )}
-          {!signature && (
+          {isSignedDoc && !signature && (
             <button
               onClick={() => setShowModal(true)}
               className="absolute left-1/2 bottom-8 z-20 -translate-x-1/2 rounded-xl border-2 border-dashed border-brand-700 bg-white px-8 py-4 text-sm font-bold text-brand-900 shadow-lg no-print hover:bg-brand-50"

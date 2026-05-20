@@ -28,9 +28,9 @@ export default function DocumentDetailClient({ doc, audit }: Props) {
   return (
     <div className="h-full flex overflow-hidden">
       {/* Left info panel */}
-      <div className="w-72 min-w-72 bg-white border-r border-gray-100 overflow-y-auto flex flex-col">
-        <div className="p-6 border-b border-gray-100">
-          <Link href="/dashboard" className="text-brand-700 text-xs font-medium hover:underline mb-3 inline-block">
+      <div className="w-72 min-w-72 bg-white dark:bg-brand-900 border-r border-gray-100 dark:border-gray-800 overflow-y-auto flex flex-col">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+          <Link href="/dashboard" className="text-brand-700 dark:text-brand-200 text-xs font-medium hover:underline mb-3 inline-block">
             ← Back
           </Link>
           <div className="flex items-center gap-2 mb-3">
@@ -39,15 +39,15 @@ export default function DocumentDetailClient({ doc, audit }: Props) {
               {STATUS_LABELS[doc.status]}
             </span>
           </div>
-          <h1 className="text-base font-bold text-brand-900">
+          <h1 className="text-base font-bold text-brand-900 dark:text-white">
             {DOCUMENT_TYPE_LABELS[effectiveType] || effectiveType}
           </h1>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
             Created {formatDistanceToNow(new Date(doc.created_at), { addSuffix: true })}
           </p>
         </div>
 
-        <div className="p-6 border-b border-gray-100 space-y-4">
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 space-y-4">
           <InfoBlock label="Client" value={doc.client_name} sub={doc.client_email} />
           {doc.client_company && <InfoBlock label="Company" value={doc.client_company} />}
           {doc.sent_at && <InfoBlock label="Sent" value={format(new Date(doc.sent_at), 'MMM d, yyyy h:mm a')} />}
@@ -55,7 +55,7 @@ export default function DocumentDetailClient({ doc, audit }: Props) {
         </div>
 
         {!requiresSignature && (
-          <div className="p-5 border-b border-gray-100 space-y-2">
+          <div className="p-5 border-b border-gray-100 dark:border-gray-800 space-y-2">
             <a href={`/api/generated-document-pdf?id=${doc.id}`} target="_blank" className="block w-full text-center bg-brand-900 text-white text-xs font-bold py-2.5 rounded-lg">
               Preview / Download PDF
             </a>
@@ -65,15 +65,15 @@ export default function DocumentDetailClient({ doc, audit }: Props) {
 
         {/* Audit trail */}
         {audit.length > 0 && (
-          <div className="p-6 border-b border-gray-100">
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Activity</p>
+          <div className="p-6 border-b border-gray-100 dark:border-gray-800">
+            <p className="text-xs font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-3">Activity</p>
             <div className="space-y-3">
               {audit.map((entry: any) => (
                 <div key={entry.id} className="flex gap-2.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-brand-200 mt-1.5 shrink-0" />
                   <div>
-                    <p className="text-xs text-brand-900 font-medium">{entry.event}</p>
-                    <p className="text-xs text-gray-400">{formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}</p>
+                    <p className="text-xs text-brand-900 dark:text-white font-medium">{entry.event}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{formatDistanceToNow(new Date(entry.created_at), { addSuffix: true })}</p>
                   </div>
                 </div>
               ))}
@@ -109,9 +109,9 @@ export default function DocumentDetailClient({ doc, audit }: Props) {
 function InfoBlock({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <div>
-      <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-      <p className="text-sm font-medium text-brand-900">{value}</p>
-      {sub && <p className="text-xs text-gray-400">{sub}</p>}
+      <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">{label}</p>
+      <p className="text-sm font-medium text-brand-900 dark:text-white">{value}</p>
+      {sub && <p className="text-xs text-gray-400 dark:text-gray-500">{sub}</p>}
     </div>
   )
 }

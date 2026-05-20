@@ -125,19 +125,25 @@ async function buildInvoicePdf(doc: Document) {
   wrapped(values.deliverables || 'As per the services mentioned in pricing document', marginX + itemW + 16, rowY, deliverableW - 32, 9.5, regular, black, 4)
   right(values.packAmount, marginX + itemW + deliverableW, rowY, costW - 16, 10, regular, black)
 
-  const summaryTop = 442
+  const summaryTop = 490
   const notesX = marginX + 16
   const notesW = 300
-  wrapped(values.upfrontDetails, notesX, summaryTop, notesW, 9, bold, black, 2, 12)
-  wrapped(values.remainingDetails, notesX, summaryTop - 13, notesW, 9, bold, black, 2, 12)
+  wrapped(values.upfrontDetails, notesX, summaryTop, notesW, 9, regular, black, 2, 12)
+  wrapped(values.remainingDetails, notesX, summaryTop - 13, notesW, 9, regular, black, 2, 12)
   wrapped(values.termsComment || '', notesX, summaryTop - 38, notesW, 8.6, regular, black, 4, 11)
 
   const summaryX = pageWidth - marginX - 260
-  const advanceLabel = doc.type === 'pre-invoice' ? 'Advance' : 'Advance Received'
-  const advanceAmount = values.advancePaid || values.advanceReceived || values.totalPaid || ''
   const pendingAmount = values.finalPending || values.pendingBalance || values.pendingAmount || values.packAmount
-  text(advanceLabel, summaryX, summaryTop - 10, 8.5, regular, black)
-  center(advanceAmount, summaryX + 130, summaryTop - 10, 110, 8.5, regular, black)
+
+  // Only show advance row for slot/final invoices — not for pre-invoice
+  if (doc.type !== 'pre-invoice') {
+    const advanceLabel = doc.type === 'final-invoice-receipt'
+      ? '100% advance Received'
+      : 'Advance Received'
+    const advanceAmount = values.advancePaid || values.advanceReceived || values.totalPaid || ''
+    text(advanceLabel, summaryX, summaryTop - 10, 8.5, regular, black)
+    center(advanceAmount, summaryX + 130, summaryTop - 10, 110, 8.5, regular, black)
+  }
   page.drawRectangle({ x: summaryX, y: summaryTop - 92, width: 260, height: 49, color: purple })
   text('Total Pending', summaryX + 14, summaryTop - 64, 8.5, bold, black)
   center(pendingAmount, summaryX + 130, summaryTop - 64, 110, 8.5, bold, black)

@@ -21,7 +21,6 @@ const CONTENT_WIDTH = 686
 const COST_COLUMN_WIDTH = 92
 const SUMMARY_WIDTH = 260
 const SUMMARY_RIGHT = 110
-const SUMMARY_BOTTOM = 354
 
 export default function SlotInvoiceTemplate({ type = 'slot-invoice-receipt', fields, clientName, clientEmail = '' }: Props) {
   const v = getReceiptValues(type, fields, clientName, clientEmail)
@@ -78,6 +77,7 @@ export default function SlotInvoiceTemplate({ type = 'slot-invoice-receipt', fie
           advanceReceived={v.advanceReceived}
           pendingBalance={v.pendingBalance}
           dueDate={v.dueDate}
+          isFinal={type === 'final-invoice-receipt'}
         />
 
         <section style={paymentDetailsStyle}>
@@ -126,17 +126,19 @@ function ReceiptSummary({
   advanceReceived,
   pendingBalance,
   dueDate,
+  isFinal = false,
 }: {
   advanceReceived: string
   pendingBalance: string
   dueDate?: string
+  isFinal?: boolean
 }) {
   const showDueDate = Boolean(dueDate && !isZeroMoney(pendingBalance))
 
   return (
     <section style={summaryStyle}>
       <div style={advanceRowStyle}>
-        <span>Advance Received</span>
+        <span>{isFinal ? '100% advance Received' : 'Advance Received'}</span>
         <strong style={amountTextStyle}>{advanceReceived}</strong>
       </div>
       <div style={pendingBoxStyle}>
@@ -341,7 +343,7 @@ const tableRowStyle: React.CSSProperties = {
 
 const commentStyle: React.CSSProperties = {
   position: 'absolute',
-  top: 630,
+  top: 642,
   left: 70,
   width: 282,
   maxHeight: 72,
@@ -352,7 +354,7 @@ const commentStyle: React.CSSProperties = {
 const summaryStyle: React.CSSProperties = {
   position: 'absolute',
   right: SUMMARY_RIGHT,
-  bottom: SUMMARY_BOTTOM,
+  top: 734,
   width: SUMMARY_WIDTH,
   zIndex: 1,
 }
@@ -424,7 +426,7 @@ const pendingDueDateStyle: React.CSSProperties = {
 
 const paymentDetailsStyle: React.CSSProperties = {
   position: 'absolute',
-  top: 720,
+  top: 734,
   left: CONTENT_LEFT,
   width: 260,
   zIndex: 1,
@@ -432,7 +434,7 @@ const paymentDetailsStyle: React.CSSProperties = {
 
 const termsStyle: React.CSSProperties = {
   position: 'absolute',
-  top: 842,
+  top: 865,
   left: CONTENT_LEFT,
   width: 562,
   zIndex: 1,
@@ -454,7 +456,7 @@ const invoiceNoStyle: React.CSSProperties = { margin: '0 0 0', fontSize: 16, fon
 const smallLineStyle: React.CSSProperties = { margin: '0 0 5px', fontSize: 8.2, color: TEXT }
 const emailLineStyle: React.CSSProperties = { ...smallLineStyle, color: '#0718D6', textDecoration: 'underline' }
 const itemTextStyle: React.CSSProperties = { margin: 0, fontSize: 8.4, color: TEXT, fontWeight: 400 }
-const commentLineStyle: React.CSSProperties = { margin: 0, fontSize: 8.4, lineHeight: '10.5px', color: TEXT, fontWeight: 700 }
+const commentLineStyle: React.CSSProperties = { margin: 0, fontSize: 8.4, lineHeight: '10.5px', color: TEXT, fontWeight: 400 }
 const paymentLineStyle: React.CSSProperties = { margin: '0 0 4px', fontSize: 8.2, color: TEXT }
 const termsHeadingStyle: React.CSSProperties = { margin: '0 0 5px', fontSize: 8.2, color: TEXT }
 const termStyle: React.CSSProperties = { margin: '0 0 3px', fontSize: 7.4, lineHeight: '10px', color: TEXT }

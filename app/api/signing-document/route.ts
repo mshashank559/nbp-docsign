@@ -22,9 +22,7 @@ export async function GET(req: NextRequest) {
   if (error || !data) return NextResponse.json({ error: 'This signing link is invalid or has expired.' }, { status: 404 })
 
   const doc = normalizeDocument(data as Document)
-  if (!requiresSignatureDocument(doc)) {
-    return NextResponse.json({ error: 'This document is view/download only and does not require a signature.' }, { status: 400 })
-  }
+
   if (doc.status === 'sent' && !alreadyTracked) {
     await supabase.from('documents').update({ status: 'viewed', view_count: Number(doc.view_count || 0) + 1 }).eq('id', doc.id)
     await insertAuditEvent(supabase, req, {
@@ -51,8 +49,8 @@ export async function GET(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const { token, signature, signatoryName, signatoryTitle, signaturePosition, agreementAddress, agreementContact } = body
-  if (!token || !signature || !signatoryName) {
-    return NextResponse.json({ error: 'Missing signature details' }, { status: 400 })
+  if (!token || !signatoryName) {
+    return NextResponse.json({ error: 'Missing completion details' }, { status: 400 })
   }
 
   let supabase
@@ -66,8 +64,8 @@ export async function PATCH(req: NextRequest) {
 
   const doc = normalizeDocument(data as Document)
   if (doc.status === 'signed') return NextResponse.json({ document: doc })
-  if (!requiresSignatureDocument(doc)) {
-    return NextResponse.json({ error: 'This document does not require a signature.' }, { status: 400 })
+  if (requiresSignatureDocument(doc) && !signature) {
+    return NextResponse.json({ error: 'Missing signature details' }, { status: 400 })
   }
 
   const signedAt = new Date().toISOString()
