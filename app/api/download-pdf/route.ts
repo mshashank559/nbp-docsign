@@ -25,6 +25,18 @@ export async function GET(req: NextRequest) {
   if (error || !doc) return new NextResponse('Document not found', { status: 404 })
 
   const normalizedDoc = normalizeDocument(doc)
+  if (normalizedDoc.type === 'final-onboarding' || normalizedDoc.type === 'offer' || normalizedDoc.type === 'appointment' || normalizedDoc.type === 'confirmation') {
+    const { buildSignedDocumentPdf } = await import('@/lib/signed-pdf')
+    const pdfBytes = await buildSignedDocumentPdf(normalizedDoc)
+    const filename = `${normalizedDoc.type}_${normalizedDoc.client_name || 'document'}.pdf`.replace(/[^\w.-]+/g, '_')
+    return new NextResponse(Buffer.from(pdfBytes), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+        'Cache-Control': 'private, no-store',
+      },
+    })
+  }
   if (token && !alreadyTracked && normalizedDoc.status === 'sent') {
     await supabase.from('documents').update({ status: 'viewed', view_count: Number(normalizedDoc.view_count || 0) + 1 }).eq('id', normalizedDoc.id)
     await insertAuditEvent(supabase, req, {

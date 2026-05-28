@@ -38,9 +38,8 @@ export async function buildDocumentPdfResponse(req: NextRequest, documentId: str
   let pdfBytes: Uint8Array
 
   try {
-    pdfBytes = doc.type === 'agreement'
-      ? await buildFilledAgreementPdf(doc.fields || {})
-      : await buildGeneratedDocumentPdf(doc)
+    const { buildSignedDocumentPdf } = await import('./signed-pdf')
+    pdfBytes = await buildSignedDocumentPdf(doc)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to generate document PDF'
     console.error('[document-pdf] PDF generation failed', { documentId: doc.id, type: doc.type, message })

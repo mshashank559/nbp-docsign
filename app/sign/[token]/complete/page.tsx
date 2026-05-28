@@ -1,23 +1,25 @@
 'use client'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Document } from '@/lib/types'
 
-export default function SignCompletePage({ params }: { params: { token: string } }) {
+export default function SignCompletePage({ params }: { params: Promise<{ token: string }> }) {
+  const unwrappedParams = React.use(params)
+  const token = unwrappedParams.token
   const [doc, setDoc] = useState<Document | null>(null)
   const [emailSent, setEmailSent] = useState(false)
   const [sendingEmail, setSendingEmail] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/signing-document?token=${encodeURIComponent(params.token)}`, { cache: 'no-store' })
+    fetch(`/api/signing-document?token=${encodeURIComponent(token)}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(body => { if (body.document) setDoc(body.document as Document) })
       .catch(() => {})
-  }, [params.token])
+  }, [token])
 
   async function emailCopy() {
     if (!doc) return
     setSendingEmail(true)
-    await fetch('/api/email-copy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: params.token }) })
+    await fetch('/api/email-copy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
     setSendingEmail(false)
     setEmailSent(true)
   }
@@ -49,7 +51,7 @@ export default function SignCompletePage({ params }: { params: { token: string }
                 </div>
                 <div><p className="font-medium">Print document</p><p className="text-xs text-gray-400">Print or save as PDF via your browser</p></div>
               </button>
-              <a href={`/api/download-pdf?token=${params.token}`} target="_blank" className="w-full flex items-center gap-3 px-6 py-4 text-sm text-gray-900 hover:bg-gray-50 transition-colors">
+              <a href={`/api/download-pdf?token=${token}`} target="_blank" className="w-full flex items-center gap-3 px-6 py-4 text-sm text-gray-900 hover:bg-gray-50 transition-colors">
                 <div className="w-8 h-8 bg-brand-100 rounded-lg flex items-center justify-center shrink-0">
                   <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M7.5 2v8M5 8l2.5 2.5L10 8" stroke="#1A3C28" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M2 12h11" stroke="#1A3C28" strokeWidth="1.2" strokeLinecap="round"/></svg>
                 </div>

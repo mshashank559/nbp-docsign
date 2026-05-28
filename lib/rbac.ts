@@ -10,7 +10,7 @@ export const DEFAULT_USER_ROLE: UserRole = 'ACCOUNTS'
 export const ACCOUNTS_ROLE_VIEW: RoleView = 'Accounts'
 export const HR_ROLE_VIEW: RoleView = 'HR'
 export const ACCOUNTS_DOC_TYPE_LABELS = ['Agreement', 'Review Agreement', 'Pre-Invoice', 'Slot-Invoice Receipt', 'Final-Invoice Receipt'] as const
-export const HR_DOC_TYPE_LABELS = ['Appointment', 'NB Offer', 'Confirmation'] as const
+export const HR_DOC_TYPE_LABELS = ['Appointment', 'NB Offer', 'Confirmation', 'Final Onboarding'] as const
 export const USER_ROLE_STORAGE_KEY = 'nbg-docsign-user-role'
 export const USER_ROLE_EVENT = 'nbg-docsign-role-change'
 
@@ -20,8 +20,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 }
 
 export const ROLE_ALLOWED_TYPES: Record<UserRole, DocType[]> = {
-  ACCOUNTS: ['agreement', 'review-agreement', 'pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt'],
-  HR: ['confirmation', 'offer', 'appointment'],
+  ACCOUNTS: ['agreement', 'review-agreement', 'pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt', 'final-onboarding'],
+  HR: ['confirmation', 'offer', 'appointment', 'final-onboarding'],
 }
 
 export function normalizeRole(value: unknown): UserRole {

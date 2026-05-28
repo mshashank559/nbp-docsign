@@ -20,7 +20,8 @@ export async function GET(req: NextRequest) {
   const doc = normalizeDocument(data as Document)
   let bytes: Uint8Array
   try {
-    bytes = await buildGeneratedDocumentPdf(doc)
+    const { buildSignedDocumentPdf } = await import('@/lib/signed-pdf')
+    bytes = await buildSignedDocumentPdf(doc)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to generate document'
     return new NextResponse(message, { status: 400 })

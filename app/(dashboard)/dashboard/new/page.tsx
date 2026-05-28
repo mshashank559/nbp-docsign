@@ -17,6 +17,7 @@ import {
   APPOINTMENT_LETTER_SECTIONS,
   CONFIRMATION_LETTER_SECTIONS,
   FINAL_INVOICE_RECEIPT_SECTIONS,
+  FINAL_ONBOARDING_SECTIONS,
   HR_LETTER_SECTIONS,
   OFFER_LETTER_SECTIONS,
   OPERATIONS_DEFAULTS,
@@ -49,6 +50,7 @@ function getSections(type: DocType) {
   if (type === 'appointment') return APPOINTMENT_LETTER_SECTIONS
   if (type === 'offer') return OFFER_LETTER_SECTIONS
   if (type === 'confirmation') return CONFIRMATION_LETTER_SECTIONS
+  if (type === 'final-onboarding') return FINAL_ONBOARDING_SECTIONS
   return AGREEMENT_SECTIONS
 }
 

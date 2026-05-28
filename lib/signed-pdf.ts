@@ -12,6 +12,25 @@ export async function buildSignedDocumentPdf(input: Document) {
 
   if (!doc.client_signature) return Buffer.from(baseBytes)
 
+  if (doc.type === 'final-onboarding') {
+    const pdf = await PDFDocument.load(baseBytes)
+    const pages = pdf.getPages()
+    if (pages[2] && doc.client_signature) {
+      const signature = await embedSignature(pdf, doc.client_signature)
+      if (signature) {
+        // "Customer Signature" label starts at x:429, spans ~99pt, center at ~x:478
+        // Center a 120pt-wide image → start at x: 418
+        pages[2].drawImage(signature, {
+          x: 418,
+          y: 370,
+          width: 120,
+          height: 32,
+        })
+      }
+    }
+    return Buffer.from(await pdf.save())
+  }
+
   const pdf = await PDFDocument.load(baseBytes)
   const pages = pdf.getPages()
   const page = pages[pages.length - 1]

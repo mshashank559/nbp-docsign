@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSearchParams } from 'next/navigation'
 import { Document } from '@/lib/types'
@@ -9,7 +9,9 @@ import DocPreview from '@/components/preview/DocPreview'
 import SignatureModal from '@/components/ui/SignatureModal'
 import DocumentActivityTracker from '@/components/ui/DocumentActivityTracker'
 
-export default function SignPage({ params }: { params: { token: string } }) {
+export default function SignPage({ params }: { params: Promise<{ token: string }> }) {
+  const unwrappedParams = React.use(params)
+  const token = unwrappedParams.token
   const router = useRouter()
   const searchParams = useSearchParams()
   const [doc, setDoc] = useState<Document | null>(null)
@@ -28,7 +30,7 @@ export default function SignPage({ params }: { params: { token: string } }) {
   useEffect(() => {
     async function loadDoc() {
       const tracked = searchParams.get('tracked') === '1' ? '&tracked=1' : ''
-      const res = await fetch(`/api/signing-document?token=${encodeURIComponent(params.token)}${tracked}`, { cache: 'no-store' })
+      const res = await fetch(`/api/signing-document?token=${encodeURIComponent(token)}${tracked}`, { cache: 'no-store' })
       const body = await res.json().catch(() => ({}))
       if (!res.ok || !body.document) {
         setError(body.error || 'This signing link is invalid or has expired.')
@@ -38,7 +40,7 @@ export default function SignPage({ params }: { params: { token: string } }) {
 
       const data = body.document as Document
       if (data.status === 'signed') {
-        router.replace(`/sign/${params.token}/complete`)
+        router.replace(`/sign/${token}/complete`)
         return
       }
       setDoc(data)
@@ -49,10 +51,10 @@ export default function SignPage({ params }: { params: { token: string } }) {
       setLoading(false)
     }
     loadDoc()
-  }, [params.token, router, searchParams])
+  }, [token, router, searchParams])
 
   async function handleApprove() {
-    const isSignedDoc = ['agreement', 'offer', 'appointment'].includes(doc?.type || '')
+    const isSignedDoc = ['agreement', 'offer', 'appointment', 'final-onboarding'].includes(doc?.type || '')
     if (!doc || (isSignedDoc && !signature) || !agreed) return
     setSubmitting(true)
     setError('')
@@ -61,7 +63,7 @@ export default function SignPage({ params }: { params: { token: string } }) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        token: params.token,
+        token: token,
         signature: signature || 'reviewed',
         signatoryName: name,
         signatoryTitle: title,
@@ -77,7 +79,7 @@ export default function SignPage({ params }: { params: { token: string } }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentId: doc.id, signatoryName: name, signatoryEmail: doc.client_email }),
       })
-      router.push(`/sign/${params.token}/complete`)
+      router.push(`/sign/${token}/complete`)
       return
     }
 
@@ -106,11 +108,11 @@ export default function SignPage({ params }: { params: { token: string } }) {
 
   if (!doc) return null
   const isAgreement = doc.type === 'agreement'
-  const isSignedDoc = ['agreement', 'offer', 'appointment'].includes(doc.type)
+  const isSignedDoc = ['agreement', 'offer', 'appointment', 'final-onboarding'].includes(doc.type)
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col">
-      <DocumentActivityTracker token={params.token} actor={doc.client_email} source="signing" scrollContainerId="signing-document-scroll" trackOpen={false} />
+      <DocumentActivityTracker token={token} actor={doc.client_email} source="signing" scrollContainerId="signing-document-scroll" trackOpen={false} />
       <div className="bg-brand-900 px-6 py-4 flex items-center justify-between no-print">
         <div><p className="text-brand-200 text-xs font-bold">NetBounce Placement LLC</p><p className="text-white text-sm font-bold">Document Signing Portal</p></div>
         <span className="text-brand-200 text-xs">{DOCUMENT_TYPE_LABELS[doc.type] || doc.type}</span>

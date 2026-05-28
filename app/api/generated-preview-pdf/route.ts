@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { buildGeneratedDocumentPdf } from '@/lib/generated-document-pdf'
+import { buildSignedDocumentPdf } from '@/lib/signed-pdf'
 import { Document, DocType } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
       clientName = '',
       clientEmail = '',
       clientCompany = '',
+      clientSignature = '',
     } = await req.json()
 
     if (!type) return new NextResponse('Missing document type', { status: 400 })
@@ -21,12 +22,13 @@ export async function POST(req: NextRequest) {
       client_name: clientName,
       client_email: clientEmail,
       client_company: clientCompany,
+      client_signature: clientSignature || undefined,
       fields,
       signing_token: '',
       created_at: new Date().toISOString(),
     }
 
-    const pdfBytes = await buildGeneratedDocumentPdf(doc)
+    const pdfBytes = await buildSignedDocumentPdf(doc)
 
     return new NextResponse(Buffer.from(pdfBytes), {
       headers: {

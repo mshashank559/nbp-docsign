@@ -40,8 +40,19 @@ export async function proxy(request: NextRequest) {
     )
 
     try {
-      const { data } = await supabase.auth.getUser()
-      isAuthenticated = Boolean(data.user)
+      const { data, error } = await supabase.auth.getUser()
+      if (error) {
+        if (error.status === 400 || error.message?.includes('Refresh Token') || error.code === 'refresh_token_not_found') {
+          request.cookies.getAll().forEach(c => {
+            if (c.name.startsWith('sb-') || c.name.includes('auth')) {
+              response.cookies.delete(c.name)
+            }
+          })
+        }
+        isAuthenticated = false
+      } else {
+        isAuthenticated = Boolean(data.user)
+      }
     } catch {
       isAuthenticated = false
     }

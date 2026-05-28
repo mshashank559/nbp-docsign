@@ -17,6 +17,6 @@ export function getLegacyDatabaseType(type: DocType) {
   if (type === 'agreement') return 'SALES_LEGAL'
   if (type === 'review-agreement') return 'SALES_LEGAL'
   if (type === 'pre-invoice' || type === 'slot-invoice-receipt' || type === 'final-invoice-receipt') return 'ACCOUNTS'
-  if (type === 'appointment' || type === 'offer' || type === 'confirmation') return 'HR'
+  if (type === 'appointment' || type === 'offer' || type === 'confirmation' || type === 'final-onboarding') return 'HR'
   return type
 }

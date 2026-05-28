@@ -19,9 +19,6 @@ export async function POST(req: NextRequest) {
   const signature = String(body.signature || '')
 
   if (!documentId) return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
-  if (!candidateName || !candidateAddress || !candidatePhone) {
-    return NextResponse.json({ error: 'Candidate details are required.' }, { status: 400 })
-  }
 
   const supabase = serviceClient()
   console.log('[document/sign] fetching document', { documentId })
@@ -31,9 +28,40 @@ export async function POST(req: NextRequest) {
   const doc = normalizeDocument(data as Document)
   if (doc.status === 'signed') return NextResponse.json({ ok: true, alreadySigned: true })
 
-  const requiresSignature = doc.type === 'agreement'
+  const requiresSignature = doc.type === 'agreement' || doc.type === 'final-onboarding'
+
+  if (doc.type === 'final-onboarding') {
+    const o = body.onboardingFields || {}
+    if (
+      !candidateName ||
+      !o.candidate_dob ||
+      !o.candidate_ssn ||
+      !o.candidate_email ||
+      !o.candidate_current_address ||
+      !o.candidate_past_address ||
+      !o.candidate_address_dates ||
+      !o.candidate_university ||
+      !o.candidate_degree ||
+      !o.candidate_grad_dates ||
+      !o.candidate_bank_name ||
+      !o.candidate_bank_routing ||
+      !o.candidate_bank_account ||
+      !o.attachment_ead_front ||
+      !o.attachment_ead_back ||
+      !o.attachment_dl_front ||
+      !o.attachment_dl_back ||
+      !o.attachment_void_check
+    ) {
+      return NextResponse.json({ error: 'All candidate onboarding fields and attachments are required.' }, { status: 400 })
+    }
+  } else {
+    if (!candidateName || !candidateAddress || !candidatePhone) {
+      return NextResponse.json({ error: 'Candidate details are required.' }, { status: 400 })
+    }
+  }
+
   if (requiresSignature && !signature) {
-    return NextResponse.json({ error: 'Candidate details and signature are required.' }, { status: 400 })
+    return NextResponse.json({ error: 'Candidate signature is required.' }, { status: 400 })
   }
   if (signature && !signature.startsWith('data:image/')) {
     return NextResponse.json({ error: 'Signature must be a valid image.' }, { status: 400 })
@@ -41,7 +69,13 @@ export async function POST(req: NextRequest) {
 
   const signedAt = new Date().toISOString()
   console.log('[document/sign] updating document status', { documentId: doc.id, signedAt })
-  const updatedFields = {
+
+  const updatedFields = doc.type === 'final-onboarding' ? {
+    ...(doc.fields || {}),
+    ...body.onboardingFields,
+    receivingSignatoryName: candidateName,
+    receivingSignatoryDate: signedAt.slice(0, 10),
+  } : {
     ...(doc.fields || {}),
     candidate_name: candidateName,
     candidate_address: candidateAddress,
@@ -80,8 +114,8 @@ export async function POST(req: NextRequest) {
       status: requiresSignature ? 'Signed' : 'Acknowledged',
       signedAt,
       candidateName,
-      candidateAddress,
-      candidatePhone,
+      candidateAddress: doc.type === 'final-onboarding' ? body.onboardingFields?.candidate_current_address : candidateAddress,
+      candidatePhone: doc.type === 'final-onboarding' ? '' : candidatePhone,
     },
   })
 

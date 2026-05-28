@@ -12,6 +12,23 @@ type CandidateFields = {
   candidate_name: string
   candidate_address: string
   candidate_phone: string
+  candidate_dob: string
+  candidate_ssn: string
+  candidate_email: string
+  candidate_current_address: string
+  candidate_past_address: string
+  candidate_address_dates: string
+  candidate_university: string
+  candidate_degree: string
+  candidate_grad_dates: string
+  candidate_bank_name: string
+  candidate_bank_routing: string
+  candidate_bank_account: string
+  attachment_ead_front: string
+  attachment_ead_back: string
+  attachment_dl_front: string
+  attachment_dl_back: string
+  attachment_void_check: string
 }
 
 type SignMethod = 'type' | 'draw' | 'upload'
@@ -29,6 +46,23 @@ export default function PublicSigningWizard({ doc }: { doc: Document }) {
     candidate_name: doc.fields?.candidate_name || doc.fields?.agreementName || doc.client_name || '',
     candidate_address: doc.fields?.candidate_address || doc.fields?.agreementAddress || '',
     candidate_phone: doc.fields?.candidate_phone || doc.fields?.agreementContact || '',
+    candidate_dob: doc.fields?.candidate_dob || '',
+    candidate_ssn: doc.fields?.candidate_ssn || '',
+    candidate_email: doc.fields?.candidate_email || doc.client_email || '',
+    candidate_current_address: doc.fields?.candidate_current_address || '',
+    candidate_past_address: doc.fields?.candidate_past_address || '',
+    candidate_address_dates: doc.fields?.candidate_address_dates || '',
+    candidate_university: doc.fields?.candidate_university || '',
+    candidate_degree: doc.fields?.candidate_degree || '',
+    candidate_grad_dates: doc.fields?.candidate_grad_dates || '',
+    candidate_bank_name: doc.fields?.candidate_bank_name || '',
+    candidate_bank_routing: doc.fields?.candidate_bank_routing || '',
+    candidate_bank_account: doc.fields?.candidate_bank_account || '',
+    attachment_ead_front: doc.fields?.attachment_ead_front || '',
+    attachment_ead_back: doc.fields?.attachment_ead_back || '',
+    attachment_dl_front: doc.fields?.attachment_dl_front || '',
+    attachment_dl_back: doc.fields?.attachment_dl_back || '',
+    attachment_void_check: doc.fields?.attachment_void_check || '',
   })
   const [signMethod, setSignMethod] = useState<SignMethod>('type')
   const [signature, setSignature] = useState(doc.client_signature || '')
@@ -38,18 +72,13 @@ export default function PublicSigningWizard({ doc }: { doc: Document }) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  const isAgreement = doc.type === 'agreement'
+  const requiresSignature = doc.type === 'agreement' || doc.type === 'final-onboarding'
   const title = DOCUMENT_TYPE_LABELS[doc.type] || doc.type
   const signed = doc.status === 'signed'
 
   const previewFields = useMemo(() => ({
     ...(doc.fields || {}),
-    candidate_name: candidate.candidate_name,
-    candidate_address: candidate.candidate_address,
-    candidate_phone: candidate.candidate_phone,
-    agreementName: candidate.candidate_name,
-    agreementAddress: candidate.candidate_address,
-    agreementContact: candidate.candidate_phone,
+    ...candidate,
     receivingSignatoryName: candidate.candidate_name,
     receivingSignatoryDate: new Date().toISOString().slice(0, 10),
   }), [candidate, doc.fields])
@@ -63,15 +92,47 @@ export default function PublicSigningWizard({ doc }: { doc: Document }) {
     setError('')
     setMessage('')
 
-    if (!candidate.candidate_name.trim() || !candidate.candidate_address.trim() || !candidate.candidate_phone.trim()) {
-      setError('Please complete your name, address, and contact number.')
-      return
+    if (doc.type === 'final-onboarding') {
+      if (
+        !candidate.candidate_name.trim() ||
+        !candidate.candidate_dob.trim() ||
+        !candidate.candidate_ssn.trim() ||
+        !candidate.candidate_email.trim() ||
+        !candidate.candidate_current_address.trim() ||
+        !candidate.candidate_past_address.trim() ||
+        !candidate.candidate_address_dates.trim() ||
+        !candidate.candidate_university.trim() ||
+        !candidate.candidate_degree.trim() ||
+        !candidate.candidate_grad_dates.trim() ||
+        !candidate.candidate_bank_name.trim() ||
+        !candidate.candidate_bank_routing.trim() ||
+        !candidate.candidate_bank_account.trim()
+      ) {
+        setError('Please complete all candidate and banking details.')
+        return
+      }
+      if (
+        !candidate.attachment_ead_front ||
+        !candidate.attachment_ead_back ||
+        !candidate.attachment_dl_front ||
+        !candidate.attachment_dl_back ||
+        !candidate.attachment_void_check
+      ) {
+        setError('Please upload all required attachments (EAD, Driver License, Voided Check).')
+        return
+      }
+    } else {
+      if (!candidate.candidate_name.trim() || !candidate.candidate_address.trim() || !candidate.candidate_phone.trim()) {
+        setError('Please complete your name, address, and contact number.')
+        return
+      }
     }
-    if (isAgreement && (!confirmedSignature || !signature)) {
+
+    if (requiresSignature && (!confirmedSignature || !signature)) {
       setError('Please confirm your signature before submitting.')
       return
     }
-    if (isAgreement && !agreed) {
+    if (requiresSignature && !agreed) {
       setError('Please confirm that you agree to sign electronically.')
       return
     }
@@ -83,9 +144,29 @@ export default function PublicSigningWizard({ doc }: { doc: Document }) {
       body: JSON.stringify({
         documentId: doc.id,
         candidateName: candidate.candidate_name,
-        candidateAddress: candidate.candidate_address,
-        candidatePhone: candidate.candidate_phone,
-        signature: isAgreement ? signature : '',
+        candidateAddress: doc.type === 'final-onboarding' ? candidate.candidate_current_address : candidate.candidate_address,
+        candidatePhone: doc.type === 'final-onboarding' ? '' : candidate.candidate_phone,
+        signature: requiresSignature ? signature : '',
+        onboardingFields: doc.type === 'final-onboarding' ? {
+          candidate_name: candidate.candidate_name,
+          candidate_dob: candidate.candidate_dob,
+          candidate_ssn: candidate.candidate_ssn,
+          candidate_email: candidate.candidate_email,
+          candidate_current_address: candidate.candidate_current_address,
+          candidate_past_address: candidate.candidate_past_address,
+          candidate_address_dates: candidate.candidate_address_dates,
+          candidate_university: candidate.candidate_university,
+          candidate_degree: candidate.candidate_degree,
+          candidate_grad_dates: candidate.candidate_grad_dates,
+          candidate_bank_name: candidate.candidate_bank_name,
+          candidate_bank_routing: candidate.candidate_bank_routing,
+          candidate_bank_account: candidate.candidate_bank_account,
+          attachment_ead_front: candidate.attachment_ead_front,
+          attachment_ead_back: candidate.attachment_ead_back,
+          attachment_dl_front: candidate.attachment_dl_front,
+          attachment_dl_back: candidate.attachment_dl_back,
+          attachment_void_check: candidate.attachment_void_check,
+        } : null
       }),
     })
     const body = await res.json().catch(() => ({}))
@@ -121,8 +202,8 @@ export default function PublicSigningWizard({ doc }: { doc: Document }) {
       </header>
 
       <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '340px minmax(0, 1fr)' }}>
-        <aside style={{ background: '#ffffff', borderRight: '1px solid #e5e7eb', overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', justifyContent: isAgreement ? 'space-between' : 'center' }}>
-          {isAgreement ? (
+        <aside style={{ background: '#ffffff', borderRight: '1px solid #e5e7eb', overflowY: 'auto', padding: 20, display: 'flex', flexDirection: 'column', justifyContent: requiresSignature ? 'space-between' : 'center' }}>
+          {requiresSignature ? (
             <>
               <div>
                 <p style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 800, color: '#0f172a' }}>{signed ? 'Document signed' : 'Review and sign'}</p>
@@ -130,17 +211,73 @@ export default function PublicSigningWizard({ doc }: { doc: Document }) {
                   Verify details and apply your signature.
                 </p>
 
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <Field label="Candidate Name" required>
-                    <input value={candidate.candidate_name} disabled={signed} onChange={e => updateCandidate('candidate_name', e.target.value)} className="input" placeholder="Full legal name" />
-                  </Field>
-                  <Field label="Candidate Address" required>
-                    <textarea value={candidate.candidate_address} disabled={signed} onChange={e => updateCandidate('candidate_address', e.target.value)} className="input" placeholder="Full address" rows={3} style={{ resize: 'vertical' }} />
-                  </Field>
-                  <Field label="Contact Number" required>
-                    <input value={candidate.candidate_phone} disabled={signed} onChange={e => updateCandidate('candidate_phone', e.target.value)} className="input" placeholder="Phone number" />
-                  </Field>
-                </div>
+                {doc.type === 'final-onboarding' ? (
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <p style={{ margin: '10px 0 2px', fontSize: 13, fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: 4 }}>Personal Information</p>
+                    <Field label="Full Legal Name" required>
+                      <input value={candidate.candidate_name} disabled={signed} onChange={e => updateCandidate('candidate_name', e.target.value)} className="input" placeholder="Full legal name" />
+                    </Field>
+                    <Field label="Date of Birth" required>
+                      <input value={candidate.candidate_dob} disabled={signed} onChange={e => updateCandidate('candidate_dob', e.target.value)} className="input" placeholder="MM/DD/YYYY" />
+                    </Field>
+                    <Field label="Social Security Number (SSN)" required>
+                      <input value={candidate.candidate_ssn} disabled={signed} onChange={e => updateCandidate('candidate_ssn', e.target.value)} className="input" placeholder="XXX-XX-XXXX" />
+                    </Field>
+                    <Field label="Email Address" required>
+                      <input value={candidate.candidate_email} disabled={signed} onChange={e => updateCandidate('candidate_email', e.target.value)} className="input" placeholder="Email address" />
+                    </Field>
+
+                    <p style={{ margin: '10px 0 2px', fontSize: 13, fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: 4 }}>Address &amp; Education</p>
+                    <Field label="Current Physical Address" required>
+                      <textarea value={candidate.candidate_current_address} disabled={signed} onChange={e => updateCandidate('candidate_current_address', e.target.value)} className="input" placeholder="Current address" rows={2} style={{ resize: 'vertical' }} />
+                    </Field>
+                    <Field label="Past 7 Years Address" required>
+                      <textarea value={candidate.candidate_past_address} disabled={signed} onChange={e => updateCandidate('candidate_past_address', e.target.value)} className="input" placeholder="Previous addresses (last 7 years)" rows={2} style={{ resize: 'vertical' }} />
+                    </Field>
+                    <Field label="Started Living to Ending Dates" required>
+                      <input value={candidate.candidate_address_dates} disabled={signed} onChange={e => updateCandidate('candidate_address_dates', e.target.value)} className="input" placeholder="e.g. 2018 - 2024" />
+                    </Field>
+                    <Field label="University Name and Zip Code" required>
+                      <input value={candidate.candidate_university} disabled={signed} onChange={e => updateCandidate('candidate_university', e.target.value)} className="input" placeholder="University &amp; Zip" />
+                    </Field>
+                    <Field label="Degree Obtained" required>
+                      <input value={candidate.candidate_degree} disabled={signed} onChange={e => updateCandidate('candidate_degree', e.target.value)} className="input" placeholder="Degree name" />
+                    </Field>
+                    <Field label="Graduation Start to End (MM/YYYY)" required>
+                      <input value={candidate.candidate_grad_dates} disabled={signed} onChange={e => updateCandidate('candidate_grad_dates', e.target.value)} className="input" placeholder="MM/YYYY - MM/YYYY" />
+                    </Field>
+
+                    <p style={{ margin: '10px 0 2px', fontSize: 13, fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: 4 }}>Banking Details</p>
+                    <Field label="Bank Name" required>
+                      <input value={candidate.candidate_bank_name} disabled={signed} onChange={e => updateCandidate('candidate_bank_name', e.target.value)} className="input" placeholder="Bank Name" />
+                    </Field>
+                    <Field label="Routing Number" required>
+                      <input value={candidate.candidate_bank_routing} disabled={signed} onChange={e => updateCandidate('candidate_bank_routing', e.target.value)} className="input" placeholder="9-digit Routing Number" />
+                    </Field>
+                    <Field label="Account Number" required>
+                      <input value={candidate.candidate_bank_account} disabled={signed} onChange={e => updateCandidate('candidate_bank_account', e.target.value)} className="input" placeholder="Account Number" />
+                    </Field>
+
+                    <p style={{ margin: '10px 0 2px', fontSize: 13, fontWeight: 700, color: '#1e293b', borderBottom: '1px solid #e2e8f0', paddingBottom: 4 }}>Required Attachments</p>
+                    <FileUploadField label="EAD Card Front" value={candidate.attachment_ead_front} onChange={val => updateCandidate('attachment_ead_front', val)} disabled={signed} />
+                    <FileUploadField label="EAD Card Back" value={candidate.attachment_ead_back} onChange={val => updateCandidate('attachment_ead_back', val)} disabled={signed} />
+                    <FileUploadField label="Driver License Front" value={candidate.attachment_dl_front} onChange={val => updateCandidate('attachment_dl_front', val)} disabled={signed} />
+                    <FileUploadField label="Driver License Back" value={candidate.attachment_dl_back} onChange={val => updateCandidate('attachment_dl_back', val)} disabled={signed} />
+                    <FileUploadField label="Voided Check" value={candidate.attachment_void_check} onChange={val => updateCandidate('attachment_void_check', val)} disabled={signed} />
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    <Field label="Candidate Name" required>
+                      <input value={candidate.candidate_name} disabled={signed} onChange={e => updateCandidate('candidate_name', e.target.value)} className="input" placeholder="Full legal name" />
+                    </Field>
+                    <Field label="Candidate Address" required>
+                      <textarea value={candidate.candidate_address} disabled={signed} onChange={e => updateCandidate('candidate_address', e.target.value)} className="input" placeholder="Full address" rows={3} style={{ resize: 'vertical' }} />
+                    </Field>
+                    <Field label="Contact Number" required>
+                      <input value={candidate.candidate_phone} disabled={signed} onChange={e => updateCandidate('candidate_phone', e.target.value)} className="input" placeholder="Phone number" />
+                    </Field>
+                  </div>
+                )}
 
                 <div style={{ marginTop: 18, borderTop: '1px solid #e5e7eb', paddingTop: 16 }}>
                   <p style={{ margin: '0 0 8px', fontSize: 12, fontWeight: 700, color: '#dc2626' }}>Candidate Signature *</p>
@@ -198,7 +335,7 @@ export default function PublicSigningWizard({ doc }: { doc: Document }) {
 
         <section id="public-document-scroll" style={{ minWidth: 0, overflowY: 'auto', position: 'relative' }}>
           <div style={{ minHeight: '100%' }}>
-            {isAgreement ? (
+            {doc.type === 'agreement' ? (
               <AgreementPdfPreview fields={previewFields} clientName={candidate.candidate_name} clientSignature={signature || undefined} />
             ) : (
               <DocPreview
@@ -226,6 +363,72 @@ function Field({ label, required, children }: { label: string; required?: boolea
       </span>
       {children}
     </label>
+  )
+}
+
+function FileUploadField({
+  label,
+  value,
+  onChange,
+  disabled
+}: {
+  label: string
+  value: string
+  onChange: (base64: string) => void
+  disabled?: boolean
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => {
+      onChange(String(ev.target?.result || ''))
+    }
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <span style={{ display: 'block', marginBottom: 5, fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
+        {label} <span style={{ color: '#dc2626' }}>*</span>
+      </span>
+      <div 
+        onClick={() => !disabled && fileInputRef.current?.click()}
+        style={{
+          border: '1px dashed #cbd5e1',
+          borderRadius: 8,
+          background: '#f8fafc',
+          padding: '10px 14px',
+          cursor: disabled ? 'default' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: 12
+        }}
+      >
+        <span style={{ color: value ? '#16a34a' : '#64748b', fontWeight: value ? '700' : 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+          {value ? '✓ Uploaded Successfully' : 'Choose file or image...'}
+        </span>
+        {!disabled && (
+          <button 
+            type="button" 
+            style={{ border: 'none', background: '#e2e8f0', color: '#0f172a', padding: '4px 8px', borderRadius: 4, fontSize: 10, fontWeight: 700 }}
+          >
+            Browse
+          </button>
+        )}
+      </div>
+      <input 
+        ref={fileInputRef} 
+        type="file" 
+        accept="image/*,application/pdf" 
+        hidden 
+        disabled={disabled}
+        onChange={handleFile} 
+      />
+    </div>
   )
 }
 

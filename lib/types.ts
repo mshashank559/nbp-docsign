@@ -1,4 +1,4 @@
-export type DocType = 'agreement' | 'review-agreement' | 'pre-invoice' | 'slot-invoice-receipt' | 'final-invoice-receipt' | 'appointment' | 'offer' | 'confirmation' | 'SALES_LEGAL' | 'ACCOUNTS' | 'HR'
+export type DocType = 'agreement' | 'review-agreement' | 'pre-invoice' | 'slot-invoice-receipt' | 'final-invoice-receipt' | 'appointment' | 'offer' | 'confirmation' | 'SALES_LEGAL' | 'ACCOUNTS' | 'HR' | 'final-onboarding'
 
 export type DocStatus = 'draft' | 'sent' | 'viewed' | 'signed'
 
@@ -55,5 +55,14 @@ export const DOCUMENT_SCHEMAS = {
     'date', 'invoice_no', 'pack_name', 'deliverables',
     'pack_amount', 'upfront_details', 'remaining_details',
     'terms_comment', 'total_paid', 'final_pending',
+  ],
+  'final-onboarding': [
+    'candidate_name', 'candidate_email', 'candidate_phone',
+    'candidate_dob', 'candidate_ssn',
+    'candidate_current_address', 'candidate_past_address', 'candidate_address_dates',
+    'candidate_university', 'candidate_degree', 'candidate_grad_dates',
+    'candidate_bank_name', 'candidate_bank_routing', 'candidate_bank_account',
+    'transaction_amount', 'transaction_frequency', 'transaction_period',
+    'attachment_ead_front', 'attachment_ead_back', 'attachment_dl_front', 'attachment_dl_back', 'attachment_void_check'
   ],
 }

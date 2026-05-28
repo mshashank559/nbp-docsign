@@ -23,6 +23,7 @@ export const DOCUMENT_TYPES: DocumentTypeMeta[] = [
   { type: 'appointment', label: 'Letter of Appointment', shortLabel: 'Appointment', department: 'Human Resources', desc: 'Appointment letter for a selected candidate or employee.', color: '#db2777', bg: '#fdf2f8', border: '#fbcfe8', emoji: 'Appointment' },
   { type: 'offer', label: 'NB Offer Letter', shortLabel: 'NB Offer', department: 'Human Resources', desc: 'Offer letter with role, compensation, and joining details.', color: '#d97706', bg: '#fffbeb', border: '#fde68a', emoji: 'Offer' },
   { type: 'confirmation', label: 'Confirmation Letter', shortLabel: 'Confirmation', department: 'Human Resources', desc: 'Confirmation letter for employment status updates.', color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe', emoji: 'Confirmation' },
+  { type: 'final-onboarding', label: 'Final Onboarding Document', shortLabel: 'Onboarding', department: 'Human Resources', desc: 'Final onboarding package containing candidate info, background check, banking, transaction details, and signatures.', color: '#059669', bg: '#ecfdf5', border: '#a7f3d0', emoji: 'Onboarding' },
 ]
 
 export const DOCUMENT_TYPE_VALUES = DOCUMENT_TYPES.map(d => d.type)

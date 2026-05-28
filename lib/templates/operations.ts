@@ -106,10 +106,17 @@ export const OPERATIONS_DEFAULTS: Record<string, string> = {
   Designation: '',
   date: new Date().toISOString().slice(0, 10),
   'DD-MM-YYYY': '',
+  transaction_amount: '',
+  transaction_frequency: '',
+  transaction_period: '',
 }
 
 export const AGREEMENT_SECTIONS = [
   { id: 'agreement-admin', label: 'Admin Controlled Agreement Fields', fields: ['enrollmentPlanType', 'finalPaymentConditions', 'currentAgreedPaymentConditions', 'priAuthoritySignatureImage', 'signatureBoxLabel'] },
+]
+
+export const FINAL_ONBOARDING_SECTIONS = [
+  { id: 'transaction-details', label: 'ACH Transaction Details (Filled by Employer)', fields: ['transaction_amount', 'transaction_frequency', 'transaction_period', 'priAuthoritySignatureImage'] }
 ]
 
 export const PRE_INVOICE_SECTIONS = [
@@ -259,4 +266,7 @@ export const OPERATIONS_FIELD_CONFIG: Record<string, { label: string; placeholde
   Designation: { label: 'Designation' },
   date: { label: 'date', type: 'date' },
   'DD-MM-YYYY': { label: 'DD-MM-YYYY', type: 'date' },
+  transaction_amount: { label: 'Amount of Debit', placeholder: 'e.g. $1000' },
+  transaction_frequency: { label: 'Debit Frequency', placeholder: 'e.g. Monthly / Weekly' },
+  transaction_period: { label: 'Transaction Period', placeholder: 'e.g. 1 Year / Until Complete' },
 }

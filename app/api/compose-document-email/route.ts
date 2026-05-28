@@ -50,8 +50,10 @@ export async function POST(req: NextRequest) {
     const emailInput = buildDocumentEmailInput(normalizedDoc, actions, { url: baseUrl })
 
     // 🎯 FORCEFUL OVERWRITE: Manually build the HTML card structure to guarantee the correct button URL
-    const docTypeLabel = normalizedDoc.type ? normalizedDoc.type.charAt(0).toUpperCase() + normalizedDoc.type.slice(1) : 'Document'
-    const isSignedDoc = ['agreement', 'offer', 'appointment'].includes(normalizedDoc.type)
+    const docTypeLabel = normalizedDoc.type === 'final-onboarding'
+      ? 'Final Onboarding Document'
+      : (normalizedDoc.type ? normalizedDoc.type.charAt(0).toUpperCase() + normalizedDoc.type.slice(1).replace(/-/g, ' ') : 'Document')
+    const isSignedDoc = ['agreement', 'offer', 'appointment', 'final-onboarding'].includes(normalizedDoc.type)
     const headerText = isSignedDoc ? 'Review and sign required' : 'Review document'
     const bodyText = isSignedDoc
       ? 'Please use the button beside each document below. Each button records activity only for that specific document before opening the correct view or signing page.'

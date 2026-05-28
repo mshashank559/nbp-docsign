@@ -26,13 +26,14 @@ const STATIC_TEMPLATES: Partial<Record<DocType, string>> = {
   offer: '/templates/nb-offer-letter.pdf',
   confirmation: '/templates/confirmation-letter.pdf',
   'review-agreement': '/templates/review-agreement.pdf',
+  'final-onboarding': '/templates/final-onboarding.pdf',
 }
 
 export default function DocPreview({ type, fields, clientName, clientEmail = '', clientCompany = '', clientSignature }: Props) {
   const [pdfUrl, setPdfUrl] = useState(STATIC_TEMPLATES[type] || '')
   const payload = useMemo(
-    () => JSON.stringify({ type, fields, clientName, clientEmail, clientCompany }),
-    [type, fields, clientName, clientEmail, clientCompany]
+    () => JSON.stringify({ type, fields, clientName, clientEmail, clientCompany, clientSignature }),
+    [type, fields, clientName, clientEmail, clientCompany, clientSignature]
   )
 
   useEffect(() => {
@@ -102,7 +103,7 @@ export default function DocPreview({ type, fields, clientName, clientEmail = '',
         ) : (
           <div style={{ padding: 24, color: '#64748b', fontSize: 14 }}>Generating preview...</div>
         )}
-        {clientSignature && <CandidateSignatureBlock signature={clientSignature} />}
+        {clientSignature && type !== 'final-onboarding' && <CandidateSignatureBlock signature={clientSignature} />}
       </div>
     </div>
   )

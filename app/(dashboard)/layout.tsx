@@ -7,8 +7,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   try {
     const supabase = await createServerSupabaseClient()
-    const { data } = await supabase.auth.getUser()
-    isAuthenticated = Boolean(data.user)
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      if (error.status === 400 || error.message?.includes('Refresh Token')) {
+        try {
+          await supabase.auth.signOut()
+        } catch {}
+      }
+      isAuthenticated = false
+    } else {
+      isAuthenticated = Boolean(data.user)
+    }
   } catch {
     isAuthenticated = false
   }

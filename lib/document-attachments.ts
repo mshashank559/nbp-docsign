@@ -77,17 +77,9 @@ export async function buildDocumentEmailAttachments(doc: Document, bundleDocumen
 
   if (plainAgreement) {
     documents.push(withDocumentMeta(storedToEmailAttachment(plainAgreement), normalizedDoc, primaryLabel))
-  } else if (normalizedDoc.type === 'agreement') {
-    const { buildFilledAgreementPdf } = await import('./agreement-pdf')
-    const pdfBytes = await buildFilledAgreementPdf(fields)
-    documents.push(withDocumentMeta({
-      filename: safeFilename(`agreement_${normalizedDoc.client_name || 'document'}.pdf`),
-      contentType: 'application/pdf',
-      content: Buffer.from(pdfBytes),
-    }, normalizedDoc, primaryLabel))
   } else {
-    const { buildGeneratedDocumentPdf } = await import('./generated-document-pdf')
-    const pdfBytes = await buildGeneratedDocumentPdf(normalizedDoc)
+    const { buildSignedDocumentPdf } = await import('./signed-pdf')
+    const pdfBytes = await buildSignedDocumentPdf(normalizedDoc)
     documents.push(withDocumentMeta({
       filename: safeFilename(`${normalizedDoc.type}_${normalizedDoc.client_name || 'document'}.pdf`),
       contentType: 'application/pdf',
@@ -107,9 +99,8 @@ export async function buildDocumentEmailAttachments(doc: Document, bundleDocumen
 
   for (const childDoc of childDocuments) {
     const childLabel = DOCUMENT_TYPE_LABELS[childDoc.type] || childDoc.type
-    const pdfBytes = childDoc.type === 'agreement'
-      ? await (await import('./agreement-pdf')).buildFilledAgreementPdf(childDoc.fields || {})
-      : await (await import('./generated-document-pdf')).buildGeneratedDocumentPdf(childDoc)
+    const { buildSignedDocumentPdf } = await import('./signed-pdf')
+    const pdfBytes = await buildSignedDocumentPdf(childDoc)
     documents.push(withDocumentMeta({
       filename: safeFilename(`${childDoc.type}_${normalizedDoc.client_name || 'document'}.pdf`),
       contentType: 'application/pdf',
@@ -159,7 +150,7 @@ export function buildDocumentEmailActionAttachments(doc: Document, bundleDocumen
 export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachment[], source?: DocumentEmailUrlSource): DocumentEmailInput {
   const normalizedDoc = normalizeDocument(doc)
   const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
-  const isAgreement = normalizedDoc.type === 'agreement'
+  const isAgreement = normalizedDoc.type === 'agreement' || normalizedDoc.type === 'final-onboarding'
   const actionUrl = buildDocumentActionUrl(normalizedDoc.id, normalizedDoc.type, source)
   const documentActions = attachments
     .filter(attachment => attachment.documentId && attachment.signingToken)
@@ -167,7 +158,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       label: attachment.docLabel || attachment.docType || docLabel,
       filename: attachment.filename,
       url: buildDocumentActionUrl(attachment.documentId!, attachment.docType, source),
-      isAgreement: attachment.docType === 'agreement',
+      isAgreement: attachment.docType === 'agreement' || attachment.docType === 'final-onboarding',
     }))
   const subject = isAgreement
     ? `Signature Required: ${docLabel} - NetBounce Placement LLC`
@@ -204,7 +195,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
 }
 
 function buildDocumentActionUrl(documentId: string, type?: Document['type'], source?: DocumentEmailUrlSource) {
-  return type === 'agreement' ? buildDocumentViewUrl(documentId, source) : buildDocumentPdfUrl(documentId, source)
+  return type === 'agreement' || type === 'final-onboarding' ? buildDocumentViewUrl(documentId, source) : buildDocumentPdfUrl(documentId, source)
 }
 
 export function buildDocumentEmailDraft(doc: Document, attachments: EmailAttachment[]) {

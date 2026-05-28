@@ -460,6 +460,7 @@ function getHrTemplateName(type: Document['type']) {
   if (type === 'appointment') return 'letter-of-appointment.pdf'
   if (type === 'offer') return 'nb-offer-letter.pdf'
   if (type === 'confirmation') return 'confirmation-letter.pdf'
+  if (type === 'final-onboarding') return 'final-onboarding.pdf'
   return ''
 }
 
@@ -467,6 +468,127 @@ async function drawHrTemplateFields(pdf: PDFDocument, doc: Document) {
   const regular = await pdf.embedFont(StandardFonts.TimesRoman)
   const bold = await pdf.embedFont(StandardFonts.TimesRomanBold)
   const pages = pdf.getPages()
+
+  if (doc.type === 'final-onboarding') {
+    const f = doc.fields || {}
+    const regularHelv = await pdf.embedFont(StandardFonts.Helvetica)
+    const boldHelv = await pdf.embedFont(StandardFonts.HelveticaBold)
+    const p = pdf.getPages()
+
+    const nameTop = f.candidate_name || doc.client_name || ''
+    const nameLegal = f.candidate_name || doc.client_name || ''
+    const dob = f.candidate_dob || ''
+    const ssn = f.candidate_ssn || ''
+    const email = f.candidate_email || doc.client_email || ''
+
+    const drawH = (pageIndex: number, text: string, x: number, y: number, font = regularHelv, size = 10) => {
+      if (!text || pageIndex >= p.length) return
+      p[pageIndex].drawText(String(text), { x, y, size, font, color: rgb(0, 0, 0) })
+    }
+
+    // Page 1 — name inline in "I, ___, hereby" sentence
+    if (nameTop) {
+      const maxChars = 55
+      const displayName = nameTop.length > maxChars ? nameTop.slice(0, maxChars - 1) + '…' : nameTop
+      p[0].drawText(displayName, { x: 115, y: 684, size: 9, font: regularHelv, color: rgb(0, 0, 0) })
+    }
+
+    // Page 1 — Customer Information section: values drawn inline (same y-baseline as their labels)
+    // Each x is set just past the end of its label text; y matches the label baseline
+    drawH(0, nameLegal,                         170, 252)  // Full legal name:
+    drawH(0, dob,                               150, 210)  // Date of Birth:
+    drawH(0, ssn,                               130, 168)  // Full SSN:
+    drawH(0, email,                             110, 126)  // Email:
+    drawH(0, f.candidate_current_address || '', 165, 84)   // Current address:
+
+    // Page 2 — past_address drawn BELOW its label; all other values drawn INLINE after their label
+    drawH(1, f.candidate_past_address || '',  118, 735)   // Below "Past seven years address:" (label starts at ~x:118)
+    drawH(1, f.candidate_address_dates || '', 335, 625)  // Inline after "Started living to end living:"
+    drawH(1, f.candidate_university || '',   340, 545)   // Inline after "University Name and Zip Code:"
+    drawH(1, f.candidate_degree || '',       250, 495)   // Inline after "Degree:"
+    drawH(1, f.candidate_grad_dates || '',   385, 455)   // Inline after "Graduation Start and End (mm/yyyy):"
+    drawH(1, f.candidate_bank_name || '',    265, 328)   // Inline after "Bank Name:"
+    drawH(1, f.candidate_bank_routing || '', 305, 292)   // Inline after "Bank Routing Number:"
+    drawH(1, f.candidate_bank_account || '', 310, 256)   // Inline after "Bank Account Number:"
+    drawH(1, f.transaction_amount || '',     285, 190)   // Inline after "Amount of Debit:"
+    drawH(1, f.transaction_frequency || '',  260, 154)   // Inline after "Frequency:"
+    drawH(1, f.transaction_period || '',     300, 118)   // Inline after "Transaction period:"
+
+    // Page 3 - Employer Signature image
+    const employerSig = f.priAuthoritySignatureImage || doc.nbg_signature
+    if (employerSig) {
+      try {
+        const match = employerSig.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/i)
+        if (match) {
+          const bytes = Buffer.from(match[2], 'base64')
+          const img = match[1].toLowerCase() === 'png' ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes)
+          p[2].drawImage(img, {
+            x: 120,
+            y: 360,
+            width: 92,
+            height: 30,
+          })
+        }
+      } catch (err) {
+        console.error('Failed to embed employer signature image', err)
+      }
+    }
+
+
+
+    // Append Candidate attachments
+    const attachmentsToAppend = [
+      { key: 'attachment_ead_front', label: 'EAD Card Front' },
+      { key: 'attachment_ead_back', label: 'EAD Card Back' },
+      { key: 'attachment_dl_front', label: 'Driver License Front' },
+      { key: 'attachment_dl_back', label: 'Driver License Back' },
+      { key: 'attachment_void_check', label: 'Voided Check' }
+    ]
+
+    for (const item of attachmentsToAppend) {
+      const dataUrl = f[item.key]
+      if (dataUrl) {
+        try {
+          const match = dataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/i)
+          if (match) {
+            const bytes = Buffer.from(match[2], 'base64')
+            const img = match[1].toLowerCase() === 'png' ? await pdf.embedPng(bytes) : await pdf.embedJpg(bytes)
+            
+            const newPage = pdf.addPage([595.2, 841.92])
+            const { width: imgWidth, height: imgHeight } = img.scale(1)
+            
+            const margin = 40
+            const maxWidth = 595.2 - margin * 2
+            const maxHeight = 841.92 - margin * 2 - 40
+            
+            const scale = Math.min(maxWidth / imgWidth, maxHeight / imgHeight, 1)
+            const drawW = imgWidth * scale
+            const drawH = imgHeight * scale
+            
+            newPage.drawText(item.label, {
+              x: margin,
+              y: 841.92 - margin - 15,
+              size: 14,
+              font: boldHelv,
+              color: rgb(0, 0, 0)
+            })
+            
+            const imageX = margin + (maxWidth - drawW) / 2
+            const imageY = margin + (maxHeight - drawH) / 2
+            newPage.drawImage(img, {
+              x: imageX,
+              y: imageY,
+              width: drawW,
+              height: drawH
+            })
+          }
+        } catch (err) {
+          console.error(`Failed to append attachment ${item.label} to PDF`, err)
+        }
+      }
+    }
+    return
+  }
   const f = doc.fields || {}
   const v = getHrValues(doc)
   const employeeName = v.employeeName || f.employeeName || f.candidateName || doc.client_name || ''
