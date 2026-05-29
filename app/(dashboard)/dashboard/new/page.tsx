@@ -421,7 +421,16 @@ export default function NewDocumentPage() {
                 ))}
               </div>
               <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <button onClick={() => setStep('preview')} style={{ width: '100%', padding: '11px', borderRadius: '10px', background: docMeta.color, border: 'none', color: 'white', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}>
+                {activeDocType === 'agreement' && !activeFields['effectiveDate'] && (
+                  <p style={{ fontSize: '11px', color: '#f87171', margin: '0 0 8px', textAlign: 'center', lineHeight: 1.5 }}>
+                    ⚠ Effective Date is required to continue
+                  </p>
+                )}
+                <button
+                  onClick={() => setStep('preview')}
+                  disabled={activeDocType === 'agreement' && !activeFields['effectiveDate']}
+                  style={{ width: '100%', padding: '11px', borderRadius: '10px', background: docMeta.color, border: 'none', color: 'white', fontSize: '14px', fontWeight: 700, cursor: (activeDocType === 'agreement' && !activeFields['effectiveDate']) ? 'not-allowed' : 'pointer', opacity: (activeDocType === 'agreement' && !activeFields['effectiveDate']) ? 0.45 : 1 }}
+                >
                   Review & Send
                 </button>
               </div>

@@ -33,7 +33,7 @@ export const OPERATIONS_DEFAULTS: Record<string, string> = {
   employmentType: 'Full-time',
   probationPeriod: '3 months',
   confirmationDate: '',
-  effectiveDate: new Date().toISOString().slice(0, 10),
+  effectiveDate: '',
   disclosingSignatoryName: 'NetBounce Placement LLC',
   disclosingSignatoryTitle: 'Authorised Signatory',
   disclosingSignatoryDate: new Date().toISOString().slice(0, 10),
@@ -112,7 +112,7 @@ export const OPERATIONS_DEFAULTS: Record<string, string> = {
 }
 
 export const AGREEMENT_SECTIONS = [
-  { id: 'agreement-admin', label: 'Admin Controlled Agreement Fields', fields: ['enrollmentPlanType', 'finalPaymentConditions', 'currentAgreedPaymentConditions', 'priAuthoritySignatureImage', 'signatureBoxLabel'] },
+  { id: 'agreement-admin', label: 'Admin Controlled Agreement Fields', fields: ['effectiveDate', 'enrollmentPlanType', 'finalPaymentConditions', 'currentAgreedPaymentConditions', 'priAuthoritySignatureImage', 'signatureBoxLabel'] },
 ]
 
 export const FINAL_ONBOARDING_SECTIONS = [
@@ -193,7 +193,7 @@ export const OPERATIONS_FIELD_CONFIG: Record<string, { label: string; placeholde
   employmentType: { label: 'Employment type' },
   probationPeriod: { label: 'Probation period' },
   confirmationDate: { label: 'Confirmation date', type: 'date' },
-  effectiveDate: { label: 'Effective date', type: 'date' },
+  effectiveDate: { label: 'Effective Date', placeholder: 'DD/MM/YYYY', type: 'text' },
   disclosingSignatoryName: { label: 'NPB signatory name' },
   disclosingSignatoryTitle: { label: 'NPB signatory title' },
   disclosingSignatoryDate: { label: 'NPB signatory date', type: 'date' },

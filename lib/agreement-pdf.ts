@@ -35,10 +35,31 @@ export async function buildFilledAgreementPdf(fields: AgreementFields) {
   const name = String(fields.agreementName || '').trim()
   const address = String(fields.agreementAddress || '').trim()
   const contact = String(fields.agreementContact || '').trim()
+  const effectiveDate = String(fields.effectiveDate || '').trim()
   const plan = String(fields.enrollmentPlanType || '').trim()
   const finalPay = String(fields.finalPaymentConditions || '').trim()
   const currentPay = String(fields.currentAgreedPaymentConditions || fields.currentAgreedPaymentCondition || '').trim()
   const authoritySignature = String(fields.priAuthoritySignatureImage || '').trim()
+
+  // 0. Effective Date on Page 1 — covers the "(the "Effective Date")" placeholder text
+  if (effectiveDate) {
+    // White rectangle to erase the placeholder text
+    pages[0].drawRectangle({
+      x: 92,
+      y: 658,
+      width: 220,
+      height: 14,
+      color: rgb(1, 1, 1),
+    })
+    // Draw the actual date value
+    pages[0].drawText(effectiveDate, {
+      x: 92,
+      y: 661,
+      size: 10.5,
+      font: regular,
+      color: rgb(0, 0, 0),
+    })
+  }
 
   // 1. Candidate Details on Page 1 (index 0)
   if (name) {
