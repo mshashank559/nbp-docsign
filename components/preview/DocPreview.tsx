@@ -63,10 +63,13 @@ export default function DocPreview({ type, fields, clientName, clientEmail = '',
       if (!cancelled) setPdfUrl(objectUrl)
     }
 
-    loadFilledPdf()
+    const timer = setTimeout(() => {
+      loadFilledPdf()
+    }, 300)
 
     return () => {
       cancelled = true
+      clearTimeout(timer)
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
   }, [payload, type])

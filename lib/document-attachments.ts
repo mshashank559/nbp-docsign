@@ -147,6 +147,31 @@ export function buildDocumentEmailActionAttachments(doc: Document, bundleDocumen
   return actions.filter(action => action.documentId && action.signingToken)
 }
 
+function getEmailDocumentName(type: Document['type']): string {
+  switch (type) {
+    case 'pre-invoice':
+      return 'Pre-Invoice Agreement'
+    case 'agreement':
+      return 'Agreement'
+    case 'review-agreement':
+      return 'Review Agreement'
+    case 'slot-invoice-receipt':
+      return 'Slot-Invoice Receipt'
+    case 'final-invoice-receipt':
+      return 'Final Invoice Receipt'
+    case 'appointment':
+      return 'Letter of Appointment'
+    case 'offer':
+      return 'NB Offer Letter'
+    case 'confirmation':
+      return 'Confirmation Letter'
+    case 'final-onboarding':
+      return 'Final Onboarding Document'
+    default:
+      return 'Document'
+  }
+}
+
 export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachment[], source?: DocumentEmailUrlSource): DocumentEmailInput {
   const normalizedDoc = normalizeDocument(doc)
   const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
@@ -160,9 +185,8 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       url: buildDocumentActionUrl(attachment.documentId!, attachment.docType, source),
       isAgreement: attachment.docType === 'agreement' || attachment.docType === 'final-onboarding',
     }))
-  const subject = isAgreement
-    ? `Signature Required: ${docLabel} - NetBounce Placement LLC`
-    : `${docLabel} - NetBounce Placement LLC`
+  const docName = getEmailDocumentName(normalizedDoc.type)
+  const subject = `${normalizedDoc.client_name} - ${docName}`
   const textBody = isAgreement
     ? [
         `Hello ${normalizedDoc.client_name},`,

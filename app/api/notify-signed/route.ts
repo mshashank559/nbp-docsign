@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       const clientMsg = buildMime({
         from: process.env.GMAIL_SENDER_EMAIL,
         to: doc.client_email,
-        subject: `Your signed ${docLabel} — NetBounce Global LLC`,
+        subject: doc.type === 'agreement' ? 'NetBonds Signed Agreement Executive Copy' : `Your signed ${docLabel} — NetBounce Global LLC`,
         html: clientHtml,
       })
       await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {

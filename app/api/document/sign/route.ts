@@ -208,7 +208,7 @@ async function sendSignedCopies({
       const candidateEmailResult = await sendGmailMessage({
         to: doc.client_email,
         senderDisplayName: 'NetBounce Placement',
-        subject: `Executed Copy: Your Signed ${docLabel}`,
+        subject: doc.type === 'agreement' ? 'NetBonds Signed Agreement Executive Copy' : `Executed Copy: Your Signed ${docLabel}`,
         text: `Hello ${doc.client_name},\n\nPlease find attached the final executed copy of your ${docLabel} for your records.`,
         html: buildCandidateEmailHtml(doc, docLabel, signedTime),
         attachments: [
@@ -288,7 +288,7 @@ async function sendSignedCopies({
     await transporter.sendMail({
       from: `"NetBounce Placement" <${smtpUser}>`,
       to: doc.client_email,
-      subject: `Executed Copy: Your Signed ${docLabel}`,
+      subject: doc.type === 'agreement' ? 'NetBonds Signed Agreement Executive Copy' : `Executed Copy: Your Signed ${docLabel}`,
       text: `Hello ${doc.client_name},\n\nPlease find attached the final executed copy of your ${docLabel} for your records.`,
       html: buildCandidateEmailHtml(doc, docLabel, signedTime),
       attachments: emailAttachments,
