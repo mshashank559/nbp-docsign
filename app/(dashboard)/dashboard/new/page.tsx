@@ -75,7 +75,7 @@ export default function NewDocumentPage() {
   const [docType, setDocType] = useState<DocType>(validCrmType || 'agreement')
   const [clientName, setClientName] = useState(searchParams.get('name') || '')
   const [clientEmail, setClientEmail] = useState(searchParams.get('email') || '')
-  const [clientCo, setClientCo] = useState(searchParams.get('company') || '')
+  const [clientCo, setClientCo] = useState(searchParams.get('company') || 'NetBounce Placement LLC')
   const [step, setStep] = useState<Step>(hasCRMParams && validCrmType ? 'fields' : hasCRMParams ? 'client' : 'type')
   const [fields, setFields] = useState<Record<string, string>>({})
   const [sending, setSending] = useState(false)
