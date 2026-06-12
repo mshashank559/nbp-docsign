@@ -251,8 +251,38 @@ function InfoBlock({ label, align, children }: { label: string; align: 'left' | 
   )
 }
 
+function formatUpfrontDetails(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '$3000 upfront,';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `$${match[0]} upfront,`;
+  }
+  return trimmed;
+}
+
+function formatRemainingDetails(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '$2500 payable when offer letter is received,';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `$${match[0]} payable when offer letter is received,`;
+  }
+  return trimmed;
+}
+
+function formatTermsComment(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '8% of your gross annual salary package in 4 installments calculated as per offer letter';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `${match[0]}% of your gross annual salary package in 4 installments calculated as per offer letter`;
+  }
+  return trimmed;
+}
+
 function getPreInvoiceValues(fields: Record<string, string>, clientName: string, clientEmail: string) {
-  const terms = value(fields, 'terms_comment') || '8% of your gross annual salary package in 4 installments calculated as per offer letter'
+  const terms = formatTermsComment(value(fields, 'terms_comment'))
   const termsLines = splitComment(terms)
 
   return {
@@ -264,8 +294,8 @@ function getPreInvoiceValues(fields: Record<string, string>, clientName: string,
     packName: value(fields, 'pack_name', 'packName') || 'Starter Plan:',
     deliverables: value(fields, 'deliverables', 'comments') || 'As per the services mentioned in pricing document',
     packAmount: formatMoney(value(fields, 'pack_amount', 'packAmount')) || '$ 5000.00',
-    upfrontDetails: value(fields, 'upfront_details') || '$3000 upfront,',
-    remainingDetails: value(fields, 'remaining_details') || '$2500 payable when offer letter is received,',
+    upfrontDetails: formatUpfrontDetails(value(fields, 'upfront_details')),
+    remainingDetails: formatRemainingDetails(value(fields, 'remaining_details')),
     termsCommentLine1: termsLines[0],
     termsCommentLine2: termsLines[1] || '',
     advanceAmount: formatMoney(value(fields, 'advance_amount')) || '$ 500.00',

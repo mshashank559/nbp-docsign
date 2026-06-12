@@ -187,6 +187,36 @@ function getInvoiceTemplateName(type: Document['type']) {
   return 'pre-invoice.pdf'
 }
 
+function formatUpfrontDetails(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '$3000 upfront,';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `$${match[0]} upfront,`;
+  }
+  return trimmed;
+}
+
+function formatRemainingDetails(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '$2500 payable when offer letter is received,';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `$${match[0]} payable when offer letter is received,`;
+  }
+  return trimmed;
+}
+
+function formatTermsComment(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '8% of your gross annual salary package in 4 installments calculated as per offer letter';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `${match[0]}% of your gross annual salary package in 4 installments calculated as per offer letter`;
+  }
+  return trimmed;
+}
+
 function getInvoiceValues(doc: Document) {
   const f = doc.fields || {}
   return {
@@ -198,9 +228,9 @@ function getInvoiceValues(doc: Document) {
     packName: field(f, 'pack_name', 'packName'),
     deliverables: field(f, 'deliverables', 'comments'),
     packAmount: formatInvoiceMoney(field(f, 'pack_amount', 'packAmount')),
-    upfrontDetails: field(f, 'upfront_details'),
-    remainingDetails: field(f, 'remaining_details'),
-    termsComment: field(f, 'terms_comment'),
+    upfrontDetails: formatUpfrontDetails(field(f, 'upfront_details')),
+    remainingDetails: formatRemainingDetails(field(f, 'remaining_details')),
+    termsComment: formatTermsComment(field(f, 'terms_comment')),
     advancePaid: formatInvoiceMoney(field(f, 'advance_amount')),
     pendingAmount: formatInvoiceMoney(field(f, 'pending_amount')),
     advanceReceived: formatInvoiceMoney(field(f, 'advance_received')),

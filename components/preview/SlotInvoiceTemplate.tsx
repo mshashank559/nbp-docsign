@@ -152,8 +152,38 @@ function ReceiptSummary({
   )
 }
 
+function formatUpfrontDetails(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '$3000 upfront,';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `$${match[0]} upfront,`;
+  }
+  return trimmed;
+}
+
+function formatRemainingDetails(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '$2500 payable when offer letter is received,';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `$${match[0]} payable when offer letter is received,`;
+  }
+  return trimmed;
+}
+
+function formatTermsComment(raw: string) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return '8% of your gross annual salary package in 4 installments calculated as per offer letter';
+  const match = trimmed.match(/\d+(?:\.\d+)?/);
+  if (match) {
+    return `${match[0]}% of your gross annual salary package in 4 installments calculated as per offer letter`;
+  }
+  return trimmed;
+}
+
 function getReceiptValues(type: NonNullable<Props['type']>, fields: Record<string, string>, clientName: string, clientEmail: string) {
-  const termsComment = value(fields, 'terms_comment') || '8% of your gross annual salary package in 4 installments calculated as per offer letter'
+  const termsComment = formatTermsComment(value(fields, 'terms_comment'))
   const isFinalReceipt = type === 'final-invoice-receipt'
 
   return {
@@ -165,8 +195,8 @@ function getReceiptValues(type: NonNullable<Props['type']>, fields: Record<strin
     packName: value(fields, 'pack_name', 'packName') || 'Starter Plan:',
     deliverables: value(fields, 'deliverables', 'comments') || 'As per the services mentioned in pricing document',
     packAmount: formatMoney(value(fields, 'pack_amount', 'packAmount')) || '$3000.00',
-    upfrontDetails: value(fields, 'upfront_details') || '$3000 upfront,',
-    remainingDetails: value(fields, 'remaining_details') || '$2500 payable when offer letter is received,',
+    upfrontDetails: formatUpfrontDetails(value(fields, 'upfront_details')),
+    remainingDetails: formatRemainingDetails(value(fields, 'remaining_details')),
     termsLines: splitComment(termsComment, 54),
     advanceReceived: isFinalReceipt
       ? formatMoney(value(fields, 'total_paid', 'advance_received', 'advance_amount')) || '$3000.00'
