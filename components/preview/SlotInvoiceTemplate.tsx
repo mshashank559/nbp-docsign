@@ -104,9 +104,11 @@ function Header() {
     <header style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 250, margin: 0, padding: 0 }}>
       <div style={headerBarStyle} />
       <div style={logoStyle}>
-        <div style={{ fontSize: 39, fontWeight: 800, letterSpacing: -3 }}>NB</div>
-        <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 0.5 }}>NETBOUNCE</div>
-        <div style={{ fontSize: 7, letterSpacing: 3.5, marginTop: 7 }}>PLACEMENT LLC</div>
+        <img
+          src="/nb-logo-vertical-white.png"
+          alt="NetBounce Placement LLC"
+          style={{ width: 100, height: 'auto', objectFit: 'contain' }}
+        />
       </div>
       <h1 style={invoiceTitleStyle}>INVOICE</h1>
     </header>

@@ -35,6 +35,8 @@ async function buildInvoicePdf(doc: Document) {
   const pdf = await PDFDocument.create()
   const regular = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+  const logoBytes = await readFile(path.join(process.cwd(), 'public', 'nb-logo-vertical-white.png'))
+  const logo = await pdf.embedPng(logoBytes)
   const page = pdf.addPage([794, 1123])
   const values = getInvoiceValues(doc)
   const black = rgb(0.02, 0.02, 0.02)
@@ -88,9 +90,14 @@ async function buildInvoicePdf(doc: Document) {
   const emblemCenterY = pageHeight - 40 - emblemRadius
   page.drawCircle({ x: emblemCenterX + 4, y: emblemCenterY - 4, size: emblemRadius, color: rgb(0, 0, 0), opacity: 0.14 })
   page.drawCircle({ x: emblemCenterX, y: emblemCenterY, size: emblemRadius, color: emblemBlue })
-  center('NB', emblemCenterX - 46, emblemCenterY + 17, 92, 39, bold, white)
-  center('NETBOUNCE', emblemCenterX - 58, emblemCenterY - 18, 116, 18, bold, white)
-  center('PLACEMENT LLC', emblemCenterX - 43, emblemCenterY - 38, 86, 7.4, regular, white)
+  const logoWidth = 100
+  const logoHeight = logoWidth * (2136 / 3015)
+  page.drawImage(logo, {
+    x: emblemCenterX - logoWidth / 2,
+    y: emblemCenterY - logoHeight / 2,
+    width: logoWidth,
+    height: logoHeight
+  })
 
   drawTrackedText(page, 'INVOICE', pageWidth - 282, headerY + headerHeight / 2 - 18, 34, bold, white, 8.5)
 

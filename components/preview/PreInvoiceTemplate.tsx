@@ -196,16 +196,17 @@ function Header() {
           color: '#fff',
           zIndex: 10,
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
           lineHeight: 1,
         }}
       >
-        <div style={{ fontSize: 39, fontWeight: 800, letterSpacing: -3 }}>NB</div>
-        <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: 0.5 }}>NETBOUNCE</div>
-        <div style={{ fontSize: 7, letterSpacing: 3.5, marginTop: 7 }}>PLACEMENT LLC</div>
+        <img
+          src="/nb-logo-vertical-white.png"
+          alt="NetBounce Placement LLC"
+          style={{ width: 100, height: 'auto', objectFit: 'contain' }}
+        />
       </div>
       <h1
         style={{
