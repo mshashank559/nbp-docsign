@@ -185,8 +185,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       url: buildDocumentActionUrl(attachment.documentId!, attachment.docType, source),
       isAgreement: attachment.docType === 'agreement' || attachment.docType === 'final-onboarding',
     }))
-  const docName = getEmailDocumentName(normalizedDoc.type)
-  const subject = `${normalizedDoc.client_name} - ${docName}`
+  const subject = `${normalizedDoc.client_name || 'Candidate'} - ${docLabel}`
   const textBody = isAgreement
     ? [
         `Hello ${normalizedDoc.client_name},`,
@@ -364,7 +363,7 @@ function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, acti
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;padding-right:16px">
-                    <p style="margin:0 0 4px;color:#0D1F14;font-size:14px;font-weight:700">${escapeHtml(action.label)}</p>
+                    <p style="margin:0 0 4px;color:#0b1a30;font-size:14px;font-weight:700">${escapeHtml(action.label)}</p>
                   </td>
                   <td align="right" style="vertical-align:middle;width:190px">
                     <a href="${action.url}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 18px;border-radius:8px;white-space:nowrap">${action.isAgreement ? 'Review &amp; Sign Document' : `View ${escapeHtml(action.label)}`}</a>
@@ -385,12 +384,12 @@ function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, acti
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:36px 16px;background:#f8fafc">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
-        <tr><td style="background:#0D1F14;padding:22px 28px;color:#fff">
-          <p style="margin:0;color:#A8D5B8;font-size:11px;font-weight:700">NetBounce DocSign</p>
+        <tr><td style="background:#0b1a30;padding:22px 28px;color:#fff">
+          <p style="margin:0;color:#60a5fa;font-size:11px;font-weight:700">NetBounce DocSign</p>
           <h1 style="margin:4px 0 0;font-size:18px">Review and sign required</h1>
         </td></tr>
         <tr><td style="padding:28px">
-          <p style="margin:0 0 14px;color:#0D1F14;font-size:14px">Hello ${escapeHtml(clientName)},</p>
+          <p style="margin:0 0 14px;color:#0b1a30;font-size:14px">Hello ${escapeHtml(clientName)},</p>
           <p style="margin:0 0 16px;color:#334155;font-size:14px;line-height:1.6">Please use the button beside each document below. Each button records activity only for that specific document before opening the correct view or signing page.</p>
           <table width="100%" cellpadding="0" cellspacing="0">
             ${rows || `<tr><td style="padding:16px 0;border-top:1px solid #e5e7eb"><a href="#" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px">View ${escapeHtml(docLabel)}</a></td></tr>`}

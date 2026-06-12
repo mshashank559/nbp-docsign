@@ -30,12 +30,12 @@ export async function POST(req: NextRequest) {
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:36px 16px;background:#f8fafc">
     <tr><td align="center">
       <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
-        <tr><td style="background:#0D1F14;padding:22px 28px;color:#fff">
-          <p style="margin:0;color:#A8D5B8;font-size:11px;font-weight:700">NetBounce DocSign</p>
+        <tr><td style="background:#0b1a30;padding:22px 28px;color:#fff">
+          <p style="margin:0;color:#60a5fa;font-size:11px;font-weight:700">NetBounce DocSign</p>
           <h1 style="margin:4px 0 0;font-size:18px">${docLabel}</h1>
         </td></tr>
         <tr><td style="padding:28px">
-          <p style="margin:0 0 14px;color:#0D1F14;font-size:14px">Hello ${escapeHtml(doc.client_name)},</p>
+          <p style="margin:0 0 14px;color:#0b1a30;font-size:14px">Hello ${escapeHtml(doc.client_name)},</p>
           <p style="margin:0 0 22px;color:#334155;font-size:14px;line-height:1.6">Please use the secure button below to view your document.</p>
           <a href="${documentUrl}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 22px;border-radius:8px">View ${escapeHtml(docLabel)}</a>
           <p style="margin:22px 0 0;color:#94a3b8;font-size:12px;line-height:1.5">Opening this secure link records document activity for delivery tracking.</p>
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const gmailResult = await sendGmailMessage({
       to,
       senderDisplayName: senderRole === 'HR' ? 'NetBounce HR' : senderRole === 'ACCOUNTS' ? 'NetBounce Accounts' : 'NetBounce Placement LLC',
-      subject: `${docLabel} - NetBounce Placement LLC`,
+      subject: `${doc.client_name || 'Candidate'} - ${docLabel}`,
       text: `Please use this secure link to view the ${docLabel}: ${documentUrl}`,
       html: emailHtml,
       attachments: [],

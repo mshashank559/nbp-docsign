@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
     
     emailInput.html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-        <div style="background-color: #0b2512; color: #ffffff; padding: 20px; text-align: left;">
-          <h3 style="margin: 0; color: #4caf50; font-size: 14px;">NetBounce DocSign</h3>
+        <div style="background-color: #0b1a30; color: #ffffff; padding: 20px; text-align: left;">
+          <h3 style="margin: 0; color: #60a5fa; font-size: 14px;">NetBounce DocSign</h3>
           <h2 style="margin: 5px 0 0 0; font-size: 20px; font-weight: normal;">${headerText}</h2>
         </div>
         <div style="padding: 24px; color: #333333; line-height: 1.6;">

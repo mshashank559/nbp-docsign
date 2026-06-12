@@ -32,26 +32,26 @@ export async function POST(req: NextRequest) {
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 20px">
 <tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="background:white;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
-  <tr><td style="background:#0D1F14;padding:24px 32px">
-    <p style="margin:0;color:#A8D5B8;font-size:11px;font-weight:700;margin-bottom:4px">NetBounce Global LLC · DocSign</p>
+  <tr><td style="background:#0b1a30;padding:24px 32px">
+    <p style="margin:0;color:#60a5fa;font-size:11px;font-weight:700;margin-bottom:4px">NetBounce Global LLC · DocSign</p>
     <p style="margin:0;color:white;font-size:18px;font-weight:700">✓ Document Signed</p>
   </td></tr>
   <tr><td style="padding:32px">
-    <p style="margin:0 0 16px;color:#0D1F14;font-size:15px;font-weight:700">A document has been signed</p>
+    <p style="margin:0 0 16px;color:#0b1a30;font-size:15px;font-weight:700">A document has been signed</p>
     <table style="width:100%;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;margin-bottom:24px" cellpadding="0" cellspacing="0">
-      <tr style="background:#f9fafb"><td style="padding:10px 16px;font-size:12px;color:#6b7280;width:140px">Document</td><td style="padding:10px 16px;font-size:12px;color:#0D1F14;font-weight:500">${docLabel}</td></tr>
-      <tr><td style="padding:10px 16px;font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6">Signed by</td><td style="padding:10px 16px;font-size:12px;color:#0D1F14;font-weight:500;border-top:1px solid #f3f4f6">${signatoryName} (${signatoryEmail})</td></tr>
-      <tr style="background:#f9fafb"><td style="padding:10px 16px;font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6">Client</td><td style="padding:10px 16px;font-size:12px;color:#0D1F14;font-weight:500;border-top:1px solid #f3f4f6">${doc.client_name}${doc.client_company ? ' · ' + doc.client_company : ''}</td></tr>
-      <tr><td style="padding:10px 16px;font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6">Signed at</td><td style="padding:10px 16px;font-size:12px;color:#0D1F14;font-weight:500;border-top:1px solid #f3f4f6">${signedTime}</td></tr>
+      <tr style="background:#f9fafb"><td style="padding:10px 16px;font-size:12px;color:#6b7280;width:140px">Document</td><td style="padding:10px 16px;font-size:12px;color:#0b1a30;font-weight:500">${docLabel}</td></tr>
+      <tr><td style="padding:10px 16px;font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6">Signed by</td><td style="padding:10px 16px;font-size:12px;color:#0b1a30;font-weight:500;border-top:1px solid #f3f4f6">${signatoryName} (${signatoryEmail})</td></tr>
+      <tr style="background:#f9fafb"><td style="padding:10px 16px;font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6">Client</td><td style="padding:10px 16px;font-size:12px;color:#0b1a30;font-weight:500;border-top:1px solid #f3f4f6">${doc.client_name}${doc.client_company ? ' · ' + doc.client_company : ''}</td></tr>
+      <tr><td style="padding:10px 16px;font-size:12px;color:#6b7280;border-top:1px solid #f3f4f6">Signed at</td><td style="padding:10px 16px;font-size:12px;color:#0b1a30;font-weight:500;border-top:1px solid #f3f4f6">${signedTime}</td></tr>
     </table>
     <table cellpadding="0" cellspacing="0" style="margin-bottom:12px">
-    <tr><td style="background:#0D1F14;border-radius:8px;padding:12px 24px">
+    <tr><td style="background:#0b1a30;border-radius:8px;padding:12px 24px">
       <a href="${dashboardUrl}" style="color:white;font-size:13px;font-weight:700;text-decoration:none">View in Dashboard →</a>
     </td></tr>
     </table>
     <table cellpadding="0" cellspacing="0">
     <tr><td style="border:1px solid #e5e7eb;border-radius:8px;padding:12px 24px">
-      <a href="${downloadUrl}" style="color:#0D1F14;font-size:13px;font-weight:600;text-decoration:none">Download Signed Document ↓</a>
+      <a href="${downloadUrl}" style="color:#0b1a30;font-size:13px;font-weight:600;text-decoration:none">Download Signed Document ↓</a>
     </td></tr>
     </table>
   </td></tr>
@@ -85,16 +85,16 @@ export async function POST(req: NextRequest) {
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 20px">
 <tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="background:white;border-radius:16px;overflow:hidden;border:1px solid #e5e7eb">
-  <tr><td style="background:#0D1F14;padding:24px 32px">
-    <p style="margin:0;color:#A8D5B8;font-size:11px;font-weight:700;margin-bottom:4px">NetBounce Global LLC</p>
+  <tr><td style="background:#0b1a30;padding:24px 32px">
+    <p style="margin:0;color:#60a5fa;font-size:11px;font-weight:700;margin-bottom:4px">NetBounce Global LLC</p>
     <p style="margin:0;color:white;font-size:18px;font-weight:700">Your signed document is ready</p>
   </td></tr>
   <tr><td style="padding:32px">
-    <p style="margin:0 0 12px;color:#0D1F14;font-size:14px">Hello ${doc.client_name},</p>
+    <p style="margin:0 0 12px;color:#0b1a30;font-size:14px">Hello ${doc.client_name},</p>
     <p style="margin:0 0 20px;color:#374151;font-size:14px;line-height:1.6">Thank you for signing the <strong>${docLabel}</strong> with NetBounce Global LLC. Your signed copy is ready to download.</p>
     <p style="margin:0 0 8px;color:#374151;font-size:14px"><strong>Signed:</strong> ${signedTime}</p>
     <table cellpadding="0" cellspacing="0" style="margin:20px 0">
-    <tr><td style="background:#0D1F14;border-radius:8px;padding:12px 24px">
+    <tr><td style="background:#0b1a30;border-radius:8px;padding:12px 24px">
       <a href="${downloadUrl}" style="color:white;font-size:14px;font-weight:700;text-decoration:none">Download Signed Document ↓</a>
     </td></tr>
     </table>

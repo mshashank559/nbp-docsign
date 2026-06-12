@@ -321,7 +321,7 @@ function buildTeamEmailHtml(doc: Document, docLabel: string, signedTime: string)
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:36px 16px"><tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
-<tr><td style="background:#020617;padding:24px 28px;color:#fff"><p style="margin:0;color:#93c5fd;font-size:11px;font-weight:700">NetBounce DocSign</p><h1 style="margin:6px 0 0;font-size:19px">Document Signed</h1></td></tr>
+<tr><td style="background:#0b1a30;padding:24px 28px;color:#fff"><p style="margin:0;color:#60a5fa;font-size:11px;font-weight:700">NetBounce DocSign</p><h1 style="margin:6px 0 0;font-size:19px">Document Signed</h1></td></tr>
 <tr><td style="padding:28px;color:#0f172a;font-size:14px;line-height:1.6">
 <p style="margin:0 0 16px">The candidate has completed the signing process.</p>
 <p style="margin:0"><strong>Document:</strong> ${escapeHtml(docLabel)}</p>
@@ -335,7 +335,7 @@ function buildCandidateEmailHtml(doc: Document, docLabel: string, signedTime: st
   return `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:36px 16px"><tr><td align="center">
 <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
-<tr><td style="background:#020617;padding:24px 28px;color:#fff"><p style="margin:0;color:#93c5fd;font-size:11px;font-weight:700">NetBounce DocSign</p><h1 style="margin:6px 0 0;font-size:19px">Thank you for signing</h1></td></tr>
+<tr><td style="background:#0b1a30;padding:24px 28px;color:#fff"><p style="margin:0;color:#60a5fa;font-size:11px;font-weight:700">NetBounce DocSign</p><h1 style="margin:6px 0 0;font-size:19px">Thank you for signing</h1></td></tr>
 <tr><td style="padding:28px;color:#0f172a;font-size:14px;line-height:1.6">
 <p style="margin:0 0 14px">Hello ${escapeHtml(doc.client_name)},</p>
 <p style="margin:0 0 16px">Thank you for signing. Please find your executed copy attached.</p>
