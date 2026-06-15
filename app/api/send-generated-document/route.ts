@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     const gmailResult = await sendGmailMessage({
       to,
       senderDisplayName: senderRole === 'HR' ? 'NetBounce HR' : senderRole === 'ACCOUNTS' ? 'NetBounce Accounts' : 'NetBounce Placement LLC',
-      subject: `${doc.client_name || 'Candidate'} - ${docLabel}`,
+      subject: `${doc.client_name || 'Candidate'} - ${docLabel} - NetBounce Placement LLC`,
       text: `Please use this secure link to view the ${docLabel}: ${documentUrl}`,
       html: emailHtml,
       attachments: [],

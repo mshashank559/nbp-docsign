@@ -185,7 +185,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       url: buildDocumentActionUrl(attachment.documentId!, attachment.docType, source),
       isAgreement: attachment.docType === 'agreement' || attachment.docType === 'final-onboarding',
     }))
-  const subject = `${normalizedDoc.client_name || 'Candidate'} - ${docLabel}`
+  const subject = `${normalizedDoc.client_name || 'Candidate'} - ${docLabel} - NetBounce Placement LLC`
   const textBody = isAgreement
     ? [
         `Hello ${normalizedDoc.client_name},`,
