@@ -176,6 +176,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
   const normalizedDoc = normalizeDocument(doc)
   const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
   const isAgreement = normalizedDoc.type === 'agreement' || normalizedDoc.type === 'final-onboarding'
+  const isInvoice = ['pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt'].includes(normalizedDoc.type)
   const actionUrl = buildDocumentActionUrl(normalizedDoc.id, normalizedDoc.type, source)
   const documentActions = attachments
     .filter(attachment => attachment.documentId && attachment.signingToken)
@@ -186,7 +187,19 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       isAgreement: attachment.docType === 'agreement' || attachment.docType === 'final-onboarding',
     }))
   const subject = `${normalizedDoc.client_name || 'Candidate'} - ${docLabel} - NetBounce Placement LLC`
-  const textBody = isAgreement
+  const textBody = isInvoice
+    ? [
+        `Hello ${normalizedDoc.client_name || 'Candidate'},`,
+        'Please use the button below to review your document. You can read and download it directly.',
+        'Payment link is attached below :-',
+        '',
+        actionUrl,
+        '',
+        'Thank You',
+        'Warm Regards,',
+        'NetBounce Placement Team',
+      ].join('\r\n')
+    : isAgreement
     ? [
         `Hello ${normalizedDoc.client_name},`,
         '',
@@ -205,7 +218,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
         'Thank you,',
         'NetBounce Placement LLC',
       ].filter(Boolean).join('\r\n')
-  const htmlBody = buildDocumentBundleEmailHtml(normalizedDoc.client_name, docLabel, documentActions)
+  const htmlBody = buildDocumentBundleEmailHtml(normalizedDoc.client_name, docLabel, documentActions, normalizedDoc.type)
 
   return {
     to: normalizedDoc.client_email,
@@ -356,7 +369,52 @@ function withDocumentMeta(attachment: EmailAttachment, doc: Document, docLabel: 
   }
 }
 
-function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, actions: { label: string; filename: string; url: string; isAgreement: boolean }[]) {
+function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, actions: { label: string; filename: string; url: string; isAgreement: boolean }[], docType?: string) {
+  const isInvoice = docType && ['pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt'].includes(docType)
+  if (isInvoice) {
+    const action = actions[0]
+    const actionUrl = action?.url || '#'
+    const invoiceLabel = docType === 'pre-invoice'
+      ? 'Pre-invoice'
+      : docType === 'slot-invoice-receipt'
+      ? 'Slot-invoice receipt'
+      : 'Final invoice receipt'
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:36px 16px;background:#f8fafc">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden">
+        <tr><td style="background:#0b1a30;padding:22px 28px;color:#fff">
+          <p style="margin:0;color:#60a5fa;font-size:11px;font-weight:700">NetBounce DocSign</p>
+          <h1 style="margin:4px 0 0;font-size:18px">Review document</h1>
+        </td></tr>
+        <tr><td style="padding:28px;color:#333333;line-height:1.6;">
+          <p style="margin:0 0 14px;color:#0b1a30;font-size:14px">Hello ${escapeHtml(clientName)},</p>
+          <p style="margin:0 0 14px;color:#334155;font-size:14px">Please use the button below to review your document. You can read and download it directly.</p>
+          <p style="margin:0 0 14px;color:#334155;font-size:14px">Payment link is attached below :- </p>
+          
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #f9f9f9; border: 1px solid #e5e7eb; border-radius: 6px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 15px; font-weight: bold; font-size: 15px; color: #111827; vertical-align: middle; text-align: left;">
+                ${invoiceLabel}
+              </td>
+              <td style="padding: 15px; vertical-align: middle; text-align: right; width: 1%; white-space: nowrap;">
+                <a href="${actionUrl}" style="background-color: #111827; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: bold; display: inline-block; white-space: nowrap;">Review Document</a>
+              </td>
+            </tr>
+          </table>
+          
+          <p style="margin: 24px 0 0; color:#334155; font-size:14px;">Thank You </p>
+          <p style="margin: 4px 0 0; color:#334155; font-size:14px;">Warm Regards, </p>
+          <p style="margin: 4px 0 0; color:#334155; font-size:14px; font-weight: bold;">NetBounce Placement Team</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+  }
+
   const rows = actions.map(action => `
           <tr>
             <td style="padding:16px 0;border-top:1px solid #e5e7eb">

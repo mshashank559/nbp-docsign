@@ -60,7 +60,56 @@ export async function POST(req: NextRequest) {
       : 'Please use the button below to review your document. You can read and download it directly.'
     const buttonText = isSignedDoc ? 'Review & Sign Document' : 'Review Document'
     
-    emailInput.html = `
+    const isInvoice = ['pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt'].includes(normalizedDoc.type)
+    if (isInvoice) {
+      const invoiceLabel = normalizedDoc.type === 'pre-invoice'
+        ? 'Pre-invoice'
+        : normalizedDoc.type === 'slot-invoice-receipt'
+        ? 'Slot-invoice receipt'
+        : 'Final invoice receipt'
+
+      emailInput.text = [
+        `Hello ${normalizedDoc.client_name || 'Candidate'},`,
+        'Please use the button below to review your document. You can read and download it directly.',
+        'Payment link is attached below :-',
+        '',
+        `Link: ${templateSigningUrl}`,
+        '',
+        'Thank You',
+        'Warm Regards,',
+        'NetBounce Placement Team',
+      ].join('\r\n')
+
+      emailInput.html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #0b1a30; color: #ffffff; padding: 20px; text-align: left;">
+          <h3 style="margin: 0; color: #60a5fa; font-size: 14px;">NetBounce DocSign</h3>
+          <h2 style="margin: 5px 0 0 0; font-size: 20px; font-weight: normal;">${headerText}</h2>
+        </div>
+        <div style="padding: 24px; color: #333333; line-height: 1.6;">
+          <p>Hello ${normalizedDoc.client_name || 'Candidate'},</p>
+          <p>Please use the button below to review your document. You can read and download it directly.</p>
+          <p>Payment link is attached below :- </p>
+          
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #f9f9f9; border: 1px solid #e5e7eb; border-radius: 6px; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 15px; font-weight: bold; font-size: 15px; color: #111827; vertical-align: middle; text-align: left;">
+                ${invoiceLabel}
+              </td>
+              <td style="padding: 15px; vertical-align: middle; text-align: right; width: 1%; white-space: nowrap;">
+                <a href="${templateSigningUrl}" style="background-color: #111827; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; font-weight: bold; display: inline-block; white-space: nowrap;">${buttonText}</a>
+              </td>
+            </tr>
+          </table>
+          
+          <p style="margin: 24px 0 0;">Thank You </p>
+          <p style="margin: 4px 0 0;">Warm Regards, </p>
+          <p style="margin: 4px 0 0; font-weight: bold;">NetBounce Placement Team</p>
+        </div>
+      </div>
+      `
+    } else {
+      emailInput.html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #0b1a30; color: #ffffff; padding: 20px; text-align: left;">
           <h3 style="margin: 0; color: #60a5fa; font-size: 14px;">NetBounce DocSign</h3>
@@ -84,7 +133,8 @@ export async function POST(req: NextRequest) {
           <p style="font-size: 12px; color: #666666; margin-top: 40px; border-top: 1px solid #eeeeee; padding-top: 10px;">Timestamps, IP address, and device details are recorded in the background for the final report.</p>
         </div>
       </div>
-    `
+      `
+    }
 
     const draftResult = await createGmailDraft(emailInput, senderRole)
     const sentAt = new Date().toISOString()
