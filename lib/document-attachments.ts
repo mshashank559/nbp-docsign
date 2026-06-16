@@ -176,7 +176,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
   const normalizedDoc = normalizeDocument(doc)
   const docLabel = DOCUMENT_TYPE_LABELS[normalizedDoc.type] || normalizedDoc.type
   const isAgreement = normalizedDoc.type === 'agreement' || normalizedDoc.type === 'final-onboarding'
-  const isInvoice = ['pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt'].includes(normalizedDoc.type)
+  const isInvoice = ['pre-invoice', 'slot-invoice-receipt'].includes(normalizedDoc.type)
   const actionUrl = buildDocumentActionUrl(normalizedDoc.id, normalizedDoc.type, source)
   const documentActions = attachments
     .filter(attachment => attachment.documentId && attachment.signingToken)
@@ -194,6 +194,8 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
         'Payment link is attached below :-',
         '',
         actionUrl,
+        '',
+        'Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.',
         '',
         'Thank You',
         'Warm Regards,',
@@ -370,15 +372,13 @@ function withDocumentMeta(attachment: EmailAttachment, doc: Document, docLabel: 
 }
 
 function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, actions: { label: string; filename: string; url: string; isAgreement: boolean }[], docType?: string) {
-  const isInvoice = docType && ['pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt'].includes(docType)
+  const isInvoice = docType && ['pre-invoice', 'slot-invoice-receipt'].includes(docType)
   if (isInvoice) {
     const action = actions[0]
     const actionUrl = action?.url || '#'
     const invoiceLabel = docType === 'pre-invoice'
       ? 'Pre-invoice'
-      : docType === 'slot-invoice-receipt'
-      ? 'Slot-invoice receipt'
-      : 'Final invoice receipt'
+      : 'Slot-invoice receipt'
     return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif">
@@ -404,6 +404,8 @@ function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, acti
               </td>
             </tr>
           </table>
+
+          <p style="margin: 0 0 14px; color:#334155; font-size:14px;">Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.</p>
           
           <p style="margin: 24px 0 0; color:#334155; font-size:14px;">Thank You </p>
           <p style="margin: 4px 0 0; color:#334155; font-size:14px;">Warm Regards, </p>

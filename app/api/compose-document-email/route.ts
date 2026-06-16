@@ -60,13 +60,11 @@ export async function POST(req: NextRequest) {
       : 'Please use the button below to review your document. You can read and download it directly.'
     const buttonText = isSignedDoc ? 'Review & Sign Document' : 'Review Document'
     
-    const isInvoice = ['pre-invoice', 'slot-invoice-receipt', 'final-invoice-receipt'].includes(normalizedDoc.type)
+    const isInvoice = ['pre-invoice', 'slot-invoice-receipt'].includes(normalizedDoc.type)
     if (isInvoice) {
       const invoiceLabel = normalizedDoc.type === 'pre-invoice'
         ? 'Pre-invoice'
-        : normalizedDoc.type === 'slot-invoice-receipt'
-        ? 'Slot-invoice receipt'
-        : 'Final invoice receipt'
+        : 'Slot-invoice receipt'
 
       emailInput.text = [
         `Hello ${normalizedDoc.client_name || 'Candidate'},`,
@@ -74,6 +72,8 @@ export async function POST(req: NextRequest) {
         'Payment link is attached below :-',
         '',
         `Link: ${templateSigningUrl}`,
+        '',
+        'Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.',
         '',
         'Thank You',
         'Warm Regards,',
@@ -101,6 +101,8 @@ export async function POST(req: NextRequest) {
               </td>
             </tr>
           </table>
+
+          <p>Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.</p>
           
           <p style="margin: 24px 0 0;">Thank You </p>
           <p style="margin: 4px 0 0;">Warm Regards, </p>
