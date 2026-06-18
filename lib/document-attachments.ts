@@ -1,6 +1,6 @@
 import { DOCUMENT_TYPE_LABELS } from './document-catalog'
-import { normalizeDocument } from './document-normalize'
-import { Document } from './types'
+import { normalizeDocument, getLegacyDatabaseType } from './document-normalize'
+import { Document, DocType } from './types'
 import { buildDocumentPdfUrl, buildDocumentViewUrl } from './app-url'
 import type { NextRequest } from 'next/server'
 
@@ -187,9 +187,13 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       isAgreement: attachment.docType === 'agreement' || attachment.docType === 'final-onboarding',
       docType: attachment.docType,
     }))
-  const subject = `${normalizedDoc.client_name || 'Candidate'} - ${docLabel} - NetBounce Placement LLC`
-  
+
   const isBundle = documentActions.length > 1
+  const docNamesStr = isBundle 
+    ? documentActions.map(action => action.label).join(' & ')
+    : docLabel
+  const subject = `${normalizedDoc.client_name || 'Candidate'} - ${docNamesStr} - NetBounce Placement LLC`
+  
   const hasInvoice = documentActions.some(action => 
     action.docType && ['pre-invoice', 'slot-invoice-receipt'].includes(action.docType)
   ) || ['pre-invoice', 'slot-invoice-receipt'].includes(normalizedDoc.type)
@@ -205,7 +209,7 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       docListText,
       invoiceInstruction,
       'Thank you,',
-      'NetBounce Placement Team',
+      'NetBounce Placement LLC',
     ].filter(Boolean).join('\r\n')
   } else if (isInvoice) {
     textBody = [
@@ -217,9 +221,8 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       '',
       'Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.',
       '',
-      'Thank You',
-      'Warm Regards,',
-      'NetBounce Placement Team',
+      'Thank you,',
+      'NetBounce Placement LLC',
     ].join('\r\n')
   } else {
     textBody = isAgreement
@@ -437,9 +440,8 @@ function buildDocumentBundleEmailHtml(
 
           <p style="margin: 0 0 14px; color:#334155; font-size:14px;">Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.</p>
           
-          <p style="margin: 24px 0 0; color:#334155; font-size:14px;">Thank You </p>
-          <p style="margin: 4px 0 0; color:#334155; font-size:14px;">Warm Regards, </p>
-          <p style="margin: 4px 0 0; color:#334155; font-size:14px; font-weight: bold;">NetBounce Placement Team</p>
+          <p style="margin: 24px 0 0; color:#334155; font-size:14px;">Thank you,</p>
+          <p style="margin: 4px 0 0; color:#334155; font-size:14px; font-weight: bold;">NetBounce Placement LLC</p>
         </td></tr>
       </table>
     </td></tr>
@@ -457,15 +459,10 @@ function buildDocumentBundleEmailHtml(
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="vertical-align:middle;padding-right:16px">
-                    <p style="margin:0 0 4px;color:#0b1a30;font-size:14px;font-weight:700">${escapeHtml(action.label)}</p>
+                    <p style="margin:0;color:#0b1a30;font-size:14px;font-weight:700">${escapeHtml(action.label)}</p>
                   </td>
                   <td align="right" style="vertical-align:middle;width:190px">
                     <a href="${action.url}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:13px;font-weight:700;padding:11px 18px;border-radius:8px;white-space:nowrap">${action.isAgreement ? 'Review &amp; Sign Document' : `View ${escapeHtml(action.label)}`}</a>
-                  </td>
-                </tr>
-                <tr>
-                  <td colspan="2" style="padding-top:8px;color:#6b7280;font-size:11px;line-height:1.4;word-break:break-all">
-                    Link: <a href="${action.url}" style="color:#2563eb;text-decoration:underline">${action.url}</a>
                   </td>
                 </tr>
               </table>
@@ -493,10 +490,8 @@ function buildDocumentBundleEmailHtml(
             ℹ️ Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.
           </p>
           ` : ''}
-          <p style="margin:20px 0 0;color:#b91c1c;font-size:11.5px;line-height:1.5;font-weight:700;background:#fef2f2;border:1px solid #fee2e2;padding:10px;border-radius:8px">
-            ⚠️ Having trouble clicking the button? If this email landed in your Spam or Junk folder, please mark it as "Not Spam" or move it to your Inbox to make the button active. Alternatively, you can copy and paste the direct link listed under the document.
-          </p>
-          <p style="margin:18px 0 0;color:#94a3b8;font-size:12px;line-height:1.5">Timestamps, IP address, and device details are recorded in the background for the final report.</p>
+          <p style="margin: 24px 0 0; color:#334155; font-size:14px;">Thank you,</p>
+          <p style="margin: 4px 0 0; color:#334155; font-size:14px; font-weight: bold;">NetBounce Placement LLC</p>
         </td></tr>
       </table>
     </td></tr>
@@ -512,4 +507,90 @@ function escapeHtml(value: string) {
     '"': '&quot;',
     "'": '&#39;',
   }[char] || char))
+}
+
+export async function prepareTrackedBundleDocuments(supabase: any, doc: Document) {
+  const bundleDocs = parseBundleDocuments(doc.fields?.__bundleDocuments)
+  if (!bundleDocs.length) {
+    return { doc, childDocs: [] as Document[], documentIds: [doc.id] }
+  }
+
+  const childDocs: Document[] = []
+  const nextBundleDocs = []
+
+  for (const bundleDoc of bundleDocs) {
+    const childFields = sanitizeBundleFields(bundleDoc.fields || {})
+    let childDoc: Document | null = null
+
+    if (bundleDoc.documentId) {
+      const { data } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', bundleDoc.documentId)
+        .single()
+      if (data) childDoc = normalizeDocument(data as Document)
+    }
+
+    if (!childDoc) {
+      const payload = {
+        type: bundleDoc.type,
+        status: 'draft',
+        client_name: doc.client_name,
+        client_email: doc.client_email,
+        client_company: doc.client_company,
+        fields: childFields,
+      }
+      const inserted = await insertBundleDocument(supabase, payload, bundleDoc.type)
+      childDoc = normalizeDocument(inserted as Document)
+    }
+
+    childDocs.push(childDoc)
+    nextBundleDocs.push({
+      id: bundleDoc.id,
+      type: childDoc.type,
+      fields: childDoc.fields || childFields,
+      documentId: childDoc.id,
+      signingToken: childDoc.signing_token,
+    })
+  }
+
+  const updatedFields = {
+    ...(doc.fields || {}),
+    __bundleDocuments: JSON.stringify(nextBundleDocs),
+  }
+
+  await supabase
+    .from('documents')
+    .update({ fields: updatedFields })
+    .eq('id', doc.id)
+
+  return {
+    doc: { ...doc, fields: updatedFields },
+    childDocs,
+    documentIds: [doc.id, ...childDocs.map(child => child.id)],
+  }
+}
+
+async function insertBundleDocument(supabase: any, payload: Record<string, unknown>, type: DocType) {
+  const result = await supabase.from('documents').insert(payload).select().single()
+  if (!result.error) return result.data
+  if (!String(result.error.message || '').includes('documents_type_check')) throw result.error
+
+  const legacyResult = await supabase
+    .from('documents')
+    .insert({
+      ...payload,
+      type: getLegacyDatabaseType(type),
+      fields: { ...((payload.fields as Record<string, string>) || {}), __docType: type },
+    })
+    .select()
+    .single()
+
+  if (legacyResult.error) throw legacyResult.error
+  return legacyResult.data
+}
+
+function sanitizeBundleFields(fields: Record<string, string>) {
+  const { __bundleDocuments, ...rest } = fields || {}
+  return rest
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { buildDocumentEmailActionAttachments, buildDocumentEmailInput, parseBundleDocuments } from '@/lib/document-attachments'
+import { buildDocumentEmailActionAttachments, buildDocumentEmailInput, parseBundleDocuments, prepareTrackedBundleDocuments } from '@/lib/document-attachments'
 import { getLegacyDatabaseType, normalizeDocument } from '@/lib/document-normalize'
 import { resolveSenderRole } from '@/lib/rbac'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
@@ -233,88 +233,4 @@ function normalizeBaseUrl(value?: string | null) {
   }
 }
 
-async function prepareTrackedBundleDocuments(supabase: any, doc: Document) {
-  const bundleDocs = parseBundleDocuments(doc.fields?.__bundleDocuments)
-  if (!bundleDocs.length) {
-    return { doc, childDocs: [] as Document[], documentIds: [doc.id] }
-  }
-
-  const childDocs: Document[] = []
-  const nextBundleDocs = []
-
-  for (const bundleDoc of bundleDocs) {
-    const childFields = sanitizeBundleFields(bundleDoc.fields || {})
-    let childDoc: Document | null = null
-
-    if (bundleDoc.documentId) {
-      const { data } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('id', bundleDoc.documentId)
-        .single()
-      if (data) childDoc = normalizeDocument(data as Document)
-    }
-
-    if (!childDoc) {
-      const payload = {
-        type: bundleDoc.type,
-        status: 'draft',
-        client_name: doc.client_name,
-        client_email: doc.client_email,
-        client_company: doc.client_company,
-        fields: childFields,
-      }
-      const inserted = await insertBundleDocument(supabase, payload, bundleDoc.type)
-      childDoc = normalizeDocument(inserted as Document)
-    }
-
-    childDocs.push(childDoc)
-    nextBundleDocs.push({
-      id: bundleDoc.id,
-      type: childDoc.type,
-      fields: childDoc.fields || childFields,
-      documentId: childDoc.id,
-      signingToken: childDoc.signing_token,
-    })
-  }
-
-  const updatedFields = {
-    ...(doc.fields || {}),
-    __bundleDocuments: JSON.stringify(nextBundleDocs),
-  }
-
-  await supabase
-    .from('documents')
-    .update({ fields: updatedFields })
-    .eq('id', doc.id)
-
-  return {
-    doc: { ...doc, fields: updatedFields },
-    childDocs,
-    documentIds: [doc.id, ...childDocs.map(child => child.id)],
-  }
-}
-
-async function insertBundleDocument(supabase: any, payload: Record<string, unknown>, type: DocType) {
-  const result = await supabase.from('documents').insert(payload).select().single()
-  if (!result.error) return result.data
-  if (!String(result.error.message || '').includes('documents_type_check')) throw result.error
-
-  const legacyResult = await supabase
-    .from('documents')
-    .insert({
-      ...payload,
-      type: getLegacyDatabaseType(type),
-      fields: { ...((payload.fields as Record<string, string>) || {}), __docType: type },
-    })
-    .select()
-    .single()
-
-  if (legacyResult.error) throw legacyResult.error
-  return legacyResult.data
-}
-
-function sanitizeBundleFields(fields: Record<string, string>) {
-  const { __bundleDocuments, ...rest } = fields || {}
-  return rest
-}
+// Done
