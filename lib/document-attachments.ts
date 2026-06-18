@@ -198,6 +198,11 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
     action.docType && ['pre-invoice', 'slot-invoice-receipt'].includes(action.docType)
   ) || ['pre-invoice', 'slot-invoice-receipt'].includes(normalizedDoc.type)
 
+  const docNamesForText = isBundle
+    ? documentActions.map(action => action.label).join(' and ')
+    : docLabel
+  const pronoun = isBundle ? 'them' : 'it'
+
   let textBody = ''
   if (isBundle) {
     const docListText = documentActions.map(action => `- ${action.label}: ${action.url}`).join('\r\n')
@@ -205,7 +210,8 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
     textBody = [
       `Hello ${normalizedDoc.client_name || 'Candidate'},`,
       '',
-      `Please use the secure links below to review the document(s):`,
+      `Here is your ${docNamesForText}. Kindly review ${pronoun}.`,
+      hasInvoice ? 'Here is the payment link -' : '',
       docListText,
       invoiceInstruction,
       'Thank you,',
@@ -214,9 +220,10 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
   } else if (isInvoice) {
     textBody = [
       `Hello ${normalizedDoc.client_name || 'Candidate'},`,
-      'Please use the button below to review your document. You can read and download it directly.',
-      'Payment link is attached below :-',
       '',
+      `Here is your ${docLabel}. Kindly review it.`,
+      '',
+      'Here is the payment link -',
       `Link: ${actionUrl}`,
       '',
       'Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.',
@@ -225,25 +232,16 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       'NetBounce Placement LLC',
     ].join('\r\n')
   } else {
-    textBody = isAgreement
-      ? [
-          `Hello ${normalizedDoc.client_name},`,
-          '',
-          `Please use the secure button in this email to review the ${docLabel} document(s) and complete the in-platform signing request:`,
-          actionUrl,
-          '',
-          'Thank you,',
-          'NetBounce Placement LLC',
-        ].join('\r\n')
-      : [
-          `Hello ${normalizedDoc.client_name},`,
-          '',
-          `Please use the secure button in this email to view the ${docLabel} document(s).`,
-          actionUrl,
-          '',
-          'Thank you,',
-          'NetBounce Placement LLC',
-        ].filter(Boolean).join('\r\n')
+    textBody = [
+      `Hello ${normalizedDoc.client_name || 'Candidate'},`,
+      '',
+      `Here is your ${docLabel}. Kindly review it.`,
+      '',
+      `Link: ${actionUrl}`,
+      '',
+      'Thank you,',
+      'NetBounce Placement LLC',
+    ].join('\r\n')
   }
 
   const htmlBody = buildDocumentBundleEmailHtml(normalizedDoc.client_name, docLabel, documentActions, normalizedDoc.type)
@@ -405,6 +403,10 @@ function buildDocumentBundleEmailHtml(
 ) {
   const isInvoice = docType && ['pre-invoice', 'slot-invoice-receipt'].includes(docType)
   const isBundle = actions.length > 1
+  const docNames = actions.length > 0
+    ? actions.map(action => action.label).join(' and ')
+    : docLabel
+  const pronoun = actions.length > 1 ? 'them' : 'it'
 
   if (isInvoice && !isBundle) {
     const action = actions[0]
@@ -424,10 +426,10 @@ function buildDocumentBundleEmailHtml(
         </td></tr>
         <tr><td style="padding:28px;color:#333333;line-height:1.6;">
           <p style="margin:0 0 14px;color:#0b1a30;font-size:14px">Hello ${escapeHtml(clientName)},</p>
-          <p style="margin:0 0 14px;color:#334155;font-size:14px">Please use the button below to review your document. You can read and download it directly.</p>
-          <p style="margin:0 0 14px;color:#334155;font-size:14px">Payment link is attached below :- </p>
+          <p style="margin:0 0 14px;color:#334155;font-size:14px">Here is your ${escapeHtml(invoiceLabel)}. Kindly review it.</p>
+          <p style="margin:0 0 14px;color:#334155;font-size:14px">Here is the payment link -</p>
           
-          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #f9f9f9; border: 1px solid #e5e7eb; border-radius: 6px; border-collapse: collapse;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f9f9f9; border: 1px solid #e5e7eb; border-radius: 6px; border-collapse: collapse;">
             <tr>
               <td style="padding: 15px; font-weight: bold; font-size: 15px; color: #111827; vertical-align: middle; text-align: left;">
                 ${invoiceLabel}
@@ -481,7 +483,8 @@ function buildDocumentBundleEmailHtml(
         </td></tr>
         <tr><td style="padding:28px">
           <p style="margin:0 0 14px;color:#0b1a30;font-size:14px">Hello ${escapeHtml(clientName)},</p>
-          <p style="margin:0 0 16px;color:#334155;font-size:14px;line-height:1.6">Please use the button beside each document below. Each button records activity only for that specific document before opening the correct view or signing page.</p>
+          <p style="margin:0 0 14px;color:#334155;font-size:14px;line-height:1.6">Here is your ${escapeHtml(docNames)}. Kindly review ${pronoun}.</p>
+          ${hasInvoice ? `<p style="margin:0 0 14px;color:#334155;font-size:14px">Here is the payment link -</p>` : ''}
           <table width="100%" cellpadding="0" cellspacing="0">
             ${rows || `<tr><td style="padding:16px 0;border-top:1px solid #e5e7eb"><a href="#" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px">View ${escapeHtml(docLabel)}</a></td></tr>`}
           </table>
