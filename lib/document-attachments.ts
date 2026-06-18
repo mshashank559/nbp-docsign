@@ -185,41 +185,64 @@ export function buildDocumentEmailInput(doc: Document, attachments: EmailAttachm
       filename: attachment.filename,
       url: buildDocumentActionUrl(attachment.documentId!, attachment.docType, source),
       isAgreement: attachment.docType === 'agreement' || attachment.docType === 'final-onboarding',
+      docType: attachment.docType,
     }))
   const subject = `${normalizedDoc.client_name || 'Candidate'} - ${docLabel} - NetBounce Placement LLC`
-  const textBody = isInvoice
-    ? [
-        `Hello ${normalizedDoc.client_name || 'Candidate'},`,
-        'Please use the button below to review your document. You can read and download it directly.',
-        'Payment link is attached below :-',
-        '',
-        actionUrl,
-        '',
-        'Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.',
-        '',
-        'Thank You',
-        'Warm Regards,',
-        'NetBounce Placement Team',
-      ].join('\r\n')
-    : isAgreement
-    ? [
-        `Hello ${normalizedDoc.client_name},`,
-        '',
-        `Please use the secure button in this email to review the ${docLabel} document(s) and complete the in-platform signing request:`,
-        actionUrl,
-        '',
-        'Thank you,',
-        'NetBounce Placement LLC',
-      ].join('\r\n')
-    : [
-        `Hello ${normalizedDoc.client_name},`,
-        '',
-        `Please use the secure button in this email to view the ${docLabel} document(s).`,
-        actionUrl,
-        '',
-        'Thank you,',
-        'NetBounce Placement LLC',
-      ].filter(Boolean).join('\r\n')
+  
+  const isBundle = documentActions.length > 1
+  const hasInvoice = documentActions.some(action => 
+    action.docType && ['pre-invoice', 'slot-invoice-receipt'].includes(action.docType)
+  ) || ['pre-invoice', 'slot-invoice-receipt'].includes(normalizedDoc.type)
+
+  let textBody = ''
+  if (isBundle) {
+    const docListText = documentActions.map(action => `- ${action.label}: ${action.url}`).join('\r\n')
+    const invoiceInstruction = hasInvoice ? '\r\nKindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.\r\n' : ''
+    textBody = [
+      `Hello ${normalizedDoc.client_name || 'Candidate'},`,
+      '',
+      `Please use the secure links below to review the document(s):`,
+      docListText,
+      invoiceInstruction,
+      'Thank you,',
+      'NetBounce Placement Team',
+    ].filter(Boolean).join('\r\n')
+  } else if (isInvoice) {
+    textBody = [
+      `Hello ${normalizedDoc.client_name || 'Candidate'},`,
+      'Please use the button below to review your document. You can read and download it directly.',
+      'Payment link is attached below :-',
+      '',
+      `Link: ${actionUrl}`,
+      '',
+      'Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.',
+      '',
+      'Thank You',
+      'Warm Regards,',
+      'NetBounce Placement Team',
+    ].join('\r\n')
+  } else {
+    textBody = isAgreement
+      ? [
+          `Hello ${normalizedDoc.client_name},`,
+          '',
+          `Please use the secure button in this email to review the ${docLabel} document(s) and complete the in-platform signing request:`,
+          actionUrl,
+          '',
+          'Thank you,',
+          'NetBounce Placement LLC',
+        ].join('\r\n')
+      : [
+          `Hello ${normalizedDoc.client_name},`,
+          '',
+          `Please use the secure button in this email to view the ${docLabel} document(s).`,
+          actionUrl,
+          '',
+          'Thank you,',
+          'NetBounce Placement LLC',
+        ].filter(Boolean).join('\r\n')
+  }
+
   const htmlBody = buildDocumentBundleEmailHtml(normalizedDoc.client_name, docLabel, documentActions, normalizedDoc.type)
 
   return {
@@ -371,9 +394,16 @@ function withDocumentMeta(attachment: EmailAttachment, doc: Document, docLabel: 
   }
 }
 
-function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, actions: { label: string; filename: string; url: string; isAgreement: boolean }[], docType?: string) {
+function buildDocumentBundleEmailHtml(
+  clientName: string,
+  docLabel: string,
+  actions: { label: string; filename: string; url: string; isAgreement: boolean; docType?: string }[],
+  docType?: string
+) {
   const isInvoice = docType && ['pre-invoice', 'slot-invoice-receipt'].includes(docType)
-  if (isInvoice) {
+  const isBundle = actions.length > 1
+
+  if (isInvoice && !isBundle) {
     const action = actions[0]
     const actionUrl = action?.url || '#'
     const invoiceLabel = docType === 'pre-invoice'
@@ -417,6 +447,10 @@ function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, acti
 </body></html>`
   }
 
+  const hasInvoice = actions.some(action => 
+    action.docType && ['pre-invoice', 'slot-invoice-receipt'].includes(action.docType)
+  ) || (docType && ['pre-invoice', 'slot-invoice-receipt'].includes(docType))
+
   const rows = actions.map(action => `
           <tr>
             <td style="padding:16px 0;border-top:1px solid #e5e7eb">
@@ -454,6 +488,11 @@ function buildDocumentBundleEmailHtml(clientName: string, docLabel: string, acti
           <table width="100%" cellpadding="0" cellspacing="0">
             ${rows || `<tr><td style="padding:16px 0;border-top:1px solid #e5e7eb"><a href="#" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;font-size:14px;font-weight:700;padding:12px 24px;border-radius:8px">View ${escapeHtml(docLabel)}</a></td></tr>`}
           </table>
+          ${hasInvoice ? `
+          <p style="margin:20px 0 0;color:#1e293b;font-size:13px;line-height:1.5;font-weight:700;background:#f8fafc;border:1px solid #e2e8f0;padding:12px;border-radius:8px">
+            ℹ️ Kindly make the payment and share the payment screenshot with us for confirmation after the transaction is completed.
+          </p>
+          ` : ''}
           <p style="margin:20px 0 0;color:#b91c1c;font-size:11.5px;line-height:1.5;font-weight:700;background:#fef2f2;border:1px solid #fee2e2;padding:10px;border-radius:8px">
             ⚠️ Having trouble clicking the button? If this email landed in your Spam or Junk folder, please mark it as "Not Spam" or move it to your Inbox to make the button active. Alternatively, you can copy and paste the direct link listed under the document.
           </p>
