@@ -45,7 +45,7 @@ export async function buildSignedDocumentPdf(input: Document) {
   const y = height - (height * pos.y) / 100 - imageHeight
 
   const drawX = doc.type === 'agreement' ? 390 : Math.min(width - imageWidth - 24, Math.max(24, x))
-  const drawY = doc.type === 'agreement' ? 420 : Math.min(height - imageHeight - 24, Math.max(24, y))
+  const drawY = doc.type === 'agreement' ? 440 : Math.min(height - imageHeight - 24, Math.max(24, y))
 
   page.drawImage(signature, {
     x: drawX,

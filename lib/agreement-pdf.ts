@@ -67,14 +67,14 @@ export async function buildFilledAgreementPdf(fields: AgreementFields) {
   }
   if (address) {
     const addressLines = wrapText(address, regular, 10.5, 350)
-    let addressY = 450
+    let addressY = 475
     for (const line of addressLines) {
       drawOnPage(0, line, 150, addressY, false, 10.5)
       addressY -= 14
     }
   }
   if (contact) {
-    drawOnPage(0, contact, 150, 400, false)
+    drawOnPage(0, contact, 150, 425, false)
   }
 
   // 2. Section 5 'PAYMENT TERM'
@@ -116,7 +116,7 @@ export async function buildFilledAgreementPdf(fields: AgreementFields) {
         // Align with the 'Authority Signature' label at X=55.9 — same offset as candidate (label=402.7, image=390)
         pages[8].drawImage(signatureImg, {
           x: 55,
-          y: 420,
+          y: 440,
           width: 150,
           height: 54,
         })
