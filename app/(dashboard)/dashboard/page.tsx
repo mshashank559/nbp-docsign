@@ -42,6 +42,12 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 50
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, statusFilter, typeFilter])
 
   const activeRole = toRoleView(role)
   const allowedTypes = useMemo(() => getAllowedDocTypes(role), [role])
@@ -112,6 +118,26 @@ export default function DashboardPage() {
     const matchType = typeFilter === 'all' || effectiveType === typeFilter
     return matchSearch && matchStatus && matchType
   })
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const paginatedDocs = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  const getPageNumbers = () => {
+    const pageNumbers = []
+    const maxVisiblePages = 5
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i)
+    } else {
+      if (currentPage <= 3) {
+        pageNumbers.push(1, 2, 3, 4, '...', totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pageNumbers.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+      } else {
+        pageNumbers.push(1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages)
+      }
+    }
+    return pageNumbers
+  }
 
   const stats = getMetricsForRole(docs, role)
 
@@ -207,11 +233,99 @@ export default function DashboardPage() {
           )}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {filtered.map(doc => (
-            <DocRowCard key={doc.id} doc={doc} onDelete={() => deleteDoc(doc.id)} />
-          ))}
-        </div>
+        <>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {paginatedDocs.map(doc => (
+              <DocRowCard key={doc.id} doc={doc} onDelete={() => deleteDoc(doc.id)} />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: '24px',
+              paddingTop: '20px',
+              borderTop: '1px solid var(--border-light)',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-3)', margin: 0 }}>
+                Showing <strong>{(currentPage - 1) * itemsPerPage + 1}</strong> to <strong>{Math.min(currentPage * itemsPerPage, filtered.length)}</strong> of <strong>{filtered.length}</strong> documents
+              </p>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="btn btn-ghost"
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    opacity: currentPage === 1 ? 0.5 : 1,
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Previous
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {getPageNumbers().map((page, idx) => {
+                    if (page === '...') {
+                      return (
+                        <span key={`dots-${idx}`} style={{ padding: '0 8px', color: 'var(--text-3)', fontSize: '13px' }}>
+                          ...
+                        </span>
+                      )
+                    }
+                    const isCurrent = currentPage === page
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(Number(page))}
+                        className={`filter-pill ${isCurrent ? 'active' : ''}`}
+                        style={{
+                          padding: '0',
+                          width: '36px',
+                          height: '36px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '10px',
+                          fontSize: '13px',
+                          border: isCurrent ? 'none' : '1.5px solid var(--border)',
+                          background: isCurrent ? 'var(--nb-blue)' : 'var(--surface)',
+                          color: isCurrent ? 'white' : 'var(--text-2)',
+                        }}
+                      >
+                        {page}
+                      </button>
+                    )
+                  })}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="btn btn-ghost"
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    height: '36px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    opacity: currentPage === totalPages ? 0.5 : 1,
+                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
