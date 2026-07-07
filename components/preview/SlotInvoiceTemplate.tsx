@@ -84,7 +84,7 @@ export default function SlotInvoiceTemplate({ type = 'slot-invoice-receipt', fie
           <p style={paymentLineStyle}>Payment Details:</p>
           <p style={paymentLineStyle}>Account Name: Netbounce Placement LLC</p>
           <p style={paymentLineStyle}>Bank Name: Choice Financial Group</p>
-          <p style={paymentLineStyle}>Account Number: 202302824963</p>
+          <p style={paymentLineStyle}>Account Number: 202308224963</p>
           <p style={paymentLineStyle}>Routing Number: 091311229</p>
         </section>
 

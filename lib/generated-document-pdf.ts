@@ -162,7 +162,7 @@ async function buildInvoicePdf(doc: Document) {
   text('Payment Details:', marginX, paymentY, 8.5, regular, black)
   text('Account Name: Netbounce Placement LLC', marginX, paymentY - 14, 8.5, regular, black)
   text('Bank Name: Choice Financial Group', marginX, paymentY - 28, 8.5, regular, black)
-  text('Account Number: 202302824963', marginX, paymentY - 42, 8.5, regular, black)
+  text('Account Number: 202308224963', marginX, paymentY - 42, 8.5, regular, black)
   text('Routing Number: 091311229', marginX, paymentY - 56, 8.5, regular, black)
 
   const terms = [

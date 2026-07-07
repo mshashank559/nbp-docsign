@@ -149,7 +149,7 @@ export default function PreInvoiceTemplate({ fields, clientName, clientEmail = '
             <p style={paymentStyle}>Payment Details:</p>
             <p style={paymentStyle}>Account Name: Netbounce Placement LLC</p>
             <p style={paymentStyle}>Bank Name: Choice Financial Group</p>
-            <p style={paymentStyle}>Account Number: 202302824963</p>
+            <p style={paymentStyle}>Account Number: 202308224963</p>
             <p style={paymentStyle}>Routing Number: 091311229</p>
           </section>
 
