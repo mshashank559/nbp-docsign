@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { serviceClient } from '@/lib/service-supabase'
 import { DOCUMENT_TYPE_LABELS } from '@/lib/document-catalog'
+import { normalizeDocument } from '@/lib/document-normalize'
+import { buildSignedDocumentPdf } from '@/lib/signed-pdf'
+import { sendGmailMessage } from '@/lib/gmail'
+import { Document } from '@/lib/types'
+
+const nodemailer = require('nodemailer') as any
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,9 +20,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Server misconfigured: missing Supabase credentials' }, { status: 500 })
     }
 
-    const { data: doc } = await supabase.from('documents').select('*').eq('id', documentId).single()
-    if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const { data: docData } = await supabase.from('documents').select('*').eq('id', documentId).single()
+    if (!docData) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
+    const doc = normalizeDocument(docData as Document)
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
       || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://nbg-docsign.vercel.app')
 
@@ -24,9 +31,26 @@ export async function POST(req: NextRequest) {
 
     const downloadUrl = `${appUrl}/api/download-pdf?id=${documentId}`
     const dashboardUrl = `${appUrl}/dashboard/documents/${documentId}`
-    const signedTime = new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })
+    
+    const signedTime = doc.signed_at 
+      ? new Date(doc.signed_at).toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })
+      : new Date().toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })
 
-    const html = `<!DOCTYPE html>
+    const filename = `${doc.type}_${doc.client_name || 'signed'}_signed.pdf`.replace(/[^\w.-]+/g, '_')
+    console.log('[notify-signed] generating final signed PDF', { documentId: doc.id, filename })
+    const signedPdf = await buildSignedDocumentPdf(doc)
+
+    if (!signedPdf || signedPdf.length === 0) {
+      console.error('[notify-signed] PDF Generation Failed: Buffer is empty', { documentId: doc.id })
+      return NextResponse.json({ error: 'PDF Generation Failed' }, { status: 500 })
+    }
+
+    const cleanEmail = (email: string) => (email || '').trim().replace(/^['"]|['"]$/g, '')
+    const gmailSender = cleanEmail(process.env.GMAIL_SENDER_EMAIL || '') || 'enroll@netbounceplacement.com'
+    const teamRecipient = cleanEmail(process.env.SIGNED_DOC_TEAM_TO || '') || gmailSender
+    const recipients = [teamRecipient, doc.client_email].filter(Boolean)
+
+    const teamHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f9fafb;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 20px">
@@ -63,23 +87,7 @@ export async function POST(req: NextRequest) {
 </table>
 </body></html>`
 
-    const accessToken = await getAccessToken()
-    if (accessToken && process.env.GMAIL_SENDER_EMAIL) {
-      // Send to NBG team
-      const nbgMsg = buildMime({
-        from: process.env.GMAIL_SENDER_EMAIL,
-        to: process.env.GMAIL_SENDER_EMAIL,
-        subject: `✓ Signed: ${docLabel} — ${doc.client_name}`,
-        html,
-      })
-      await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raw: nbgMsg }),
-      })
-
-      // Also send confirmation to client with download link
-      const clientHtml = `<!DOCTYPE html>
+    const clientHtml = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:0;background:#f9fafb;font-family:Arial,sans-serif">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:40px 20px">
@@ -108,40 +116,119 @@ export async function POST(req: NextRequest) {
 </table>
 </body></html>`
 
-      const clientMsg = buildMime({
-        from: process.env.GMAIL_SENDER_EMAIL,
-        to: doc.client_email,
-        subject: doc.type === 'agreement' ? 'NetBonds Signed Agreement Executive Copy' : `Your signed ${docLabel} — NetBounce Global LLC`,
-        html: clientHtml,
-      })
-      await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raw: clientMsg }),
-      })
-    } else {
-      console.log('SIGNED NOTIFICATION (Gmail not configured):', { documentId, signatoryName })
+    const hasGmailConfig = process.env.GMAIL_CLIENT_ID && process.env.GMAIL_CLIENT_SECRET && process.env.GMAIL_REFRESH_TOKEN
+    if (hasGmailConfig) {
+      try {
+        console.log('[notify-signed] sending via Gmail API...')
+        
+        // Send to team
+        if (teamRecipient) {
+          const teamEmailResult = await sendGmailMessage({
+            to: teamRecipient,
+            senderDisplayName: 'NetBounce Placement',
+            subject: `[COMPLETED] ${docLabel} Signed - ${doc.client_name}`,
+            text: `The candidate ${doc.client_name} has successfully executed the ${docLabel}.\nThe final signed PDF is attached to this email for administrative filing.`,
+            html: teamHtml,
+            attachments: [
+              {
+                filename,
+                contentType: 'application/pdf',
+                content: signedPdf,
+              },
+            ],
+          })
+          if (!teamEmailResult.ok) {
+            console.warn('[notify-signed] Gmail API failed to send copy to team:', teamEmailResult.reason)
+          } else {
+            console.log('[notify-signed] Gmail API successfully sent to team desk')
+          }
+        }
+
+        // Send to candidate
+        const candidateEmailResult = await sendGmailMessage({
+          to: doc.client_email,
+          senderDisplayName: 'NetBounce Placement',
+          subject: doc.type === 'agreement' ? 'NetBounce Signed Agreement Executive Copy' : `Your signed ${docLabel} — NetBounce Global LLC`,
+          text: `Hello ${doc.client_name},\n\nPlease find attached the final executed copy of your ${docLabel} for your records.`,
+          html: clientHtml,
+          attachments: [
+            {
+              filename,
+              contentType: 'application/pdf',
+              content: signedPdf,
+            },
+          ],
+        })
+
+        if (!candidateEmailResult.ok) {
+          throw new Error(`Gmail API failed to send to candidate: ${candidateEmailResult.reason}`)
+        }
+
+        console.log('[notify-signed] Gmail API successfully sent to candidate')
+        return NextResponse.json({ ok: true })
+      } catch (gmailError: any) {
+        console.error('[notify-signed] Gmail API delivery failed, trying SMTP fallback...', gmailError)
+      }
     }
 
-    return NextResponse.json({ ok: true })
+    // Fallback to SMTP
+    const smtpHost = cleanEmail(process.env.SMTP_HOST || '')
+    const smtpPort = Number(cleanEmail(process.env.SMTP_PORT || ''))
+    const smtpUser = cleanEmail(process.env.SMTP_USER || '')
+    const smtpPass = cleanEmail(process.env.SMTP_PASS || '')
+
+    if (!smtpHost || !Number.isFinite(smtpPort) || !smtpUser || !smtpPass) {
+      console.error('[notify-signed] SMTP configuration also missing')
+      return NextResponse.json({ error: 'Gmail API and SMTP are not configured.' }, { status: 500 })
+    }
+
+    try {
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      })
+
+      const emailAttachments = [
+        {
+          filename,
+          content: signedPdf,
+          contentType: 'application/pdf',
+        },
+      ]
+
+      if (teamRecipient) {
+        console.log('[notify-signed] sending executed PDF to NetBounce office desk via SMTP', { to: teamRecipient })
+        await transporter.sendMail({
+          from: `"NetBounce Placement" <${smtpUser}>`,
+          to: teamRecipient,
+          subject: `[COMPLETED] ${docLabel} Signed - ${doc.client_name}`,
+          text: `The candidate ${doc.client_name} has successfully executed the ${docLabel}.\nThe final signed PDF is attached to this email for administrative filing.`,
+          html: teamHtml,
+          attachments: emailAttachments,
+        })
+      }
+
+      console.log('[notify-signed] sending executed PDF to candidate via SMTP', { to: doc.client_email })
+      await transporter.sendMail({
+        from: `"NetBounce Placement" <${smtpUser}>`,
+        to: doc.client_email,
+        subject: doc.type === 'agreement' ? 'NetBounce Signed Agreement Executive Copy' : `Your signed ${docLabel} — NetBounce Global LLC`,
+        text: `Hello ${doc.client_name},\n\nPlease find attached the final executed copy of your ${docLabel} for your records.`,
+        html: clientHtml,
+        attachments: emailAttachments,
+      })
+
+      return NextResponse.json({ ok: true })
+    } catch (smtpError: any) {
+      console.error('[notify-signed] SMTP execution failed:', smtpError)
+      return NextResponse.json({ error: smtpError instanceof Error ? smtpError.message : 'SMTP delivery failed.' }, { status: 500 })
+    }
   } catch (err) {
     console.error(err)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
-}
-
-async function getAccessToken() {
-  const { GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN } = process.env
-  if (!GMAIL_CLIENT_ID || !GMAIL_CLIENT_SECRET || !GMAIL_REFRESH_TOKEN) return null
-  const res = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: GMAIL_CLIENT_ID, client_secret: GMAIL_CLIENT_SECRET, refresh_token: GMAIL_REFRESH_TOKEN, grant_type: 'refresh_token' }),
-  })
-  return (await res.json()).access_token ?? null
-}
-
-function buildMime({ from, to, subject, html }: { from: string; to: string; subject: string; html: string }) {
-  const mime = [`From: NetBounce Placement LLC <${from}>`, `To: ${to}`, `Subject: ${subject}`, 'MIME-Version: 1.0', 'Content-Type: text/html; charset=utf-8', '', html].join('\r\n')
-  return Buffer.from(mime).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
