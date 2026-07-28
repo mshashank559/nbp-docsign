@@ -140,21 +140,26 @@ async function buildInvoicePdf(doc: Document) {
   wrapped(values.termsComment || '', notesX, summaryTop - 38, notesW, 8.6, regular, black, 4, 11)
 
   const summaryX = pageWidth - marginX - 260
-  const pendingAmount = values.finalPending || values.pendingBalance || values.pendingAmount || values.packAmount
+  const isFinalReceipt = doc.type === 'final-invoice-receipt'
+  const pendingAmount = isFinalReceipt
+    ? (values.finalPending || values.pendingBalance || values.pendingAmount || '$0.00')
+    : (values.pendingBalance || values.pendingAmount || values.finalPending || values.packAmount)
 
   // Only show advance row for slot/final invoices — not for pre-invoice
   if (doc.type !== 'pre-invoice') {
-    const advanceLabel = doc.type === 'final-invoice-receipt'
+    const advanceLabel = isFinalReceipt
       ? '100% advance Received'
       : 'Advance Received'
-    const advanceAmount = values.advancePaid || values.advanceReceived || values.totalPaid || ''
+    const advanceAmount = isFinalReceipt
+      ? (values.advanceReceived || values.advancePaid || values.totalPaid || values.packAmount)
+      : (values.advancePaid || values.advanceReceived || values.totalPaid || '')
     text(advanceLabel, summaryX, summaryTop - 10, 8.5, regular, black)
     center(advanceAmount, summaryX + 130, summaryTop - 10, 110, 8.5, regular, black)
   }
   page.drawRectangle({ x: summaryX, y: summaryTop - 92, width: 260, height: 49, color: purple })
   text('Total Pending', summaryX + 14, summaryTop - 64, 8.5, bold, black)
   center(pendingAmount, summaryX + 130, summaryTop - 64, 110, 8.5, bold, black)
-  if (doc.type !== 'pre-invoice' && values.dueDate && !isZeroInvoiceMoney(pendingAmount)) {
+  if (!isFinalReceipt && doc.type !== 'pre-invoice' && values.dueDate && !isZeroInvoiceMoney(pendingAmount)) {
     center(`Due by: ${values.dueDate}`, summaryX + 12, summaryTop - 82, 236, 7.5, regular, muted)
   }
 
@@ -219,6 +224,18 @@ function formatTermsComment(raw: string) {
 
 function getInvoiceValues(doc: Document) {
   const f = doc.fields || {}
+  const isFinalReceipt = doc.type === 'final-invoice-receipt'
+  const packAmount = formatInvoiceMoney(field(f, 'pack_amount', 'packAmount'))
+  const advanceReceivedVal = field(f, 'advance_received', 'advance_amount', 'total_paid')
+  const advanceReceived = isFinalReceipt
+    ? (advanceReceivedVal ? formatInvoiceMoney(advanceReceivedVal) : packAmount)
+    : formatInvoiceMoney(advanceReceivedVal)
+
+  const finalPendingVal = field(f, 'final_pending', 'pending_balance', 'pending_amount')
+  const pendingBalance = isFinalReceipt
+    ? (finalPendingVal !== '' ? formatInvoiceMoney(finalPendingVal) : '$0.00')
+    : formatInvoiceMoney(finalPendingVal)
+
   return {
     candidateName: field(f, 'candidate_name', 'candidateName') || doc.client_name || '',
     candidateEmail: field(f, 'candidate_email', 'candidateEmail') || doc.client_email || '',
@@ -227,15 +244,15 @@ function getInvoiceValues(doc: Document) {
     invoiceNo: field(f, 'invoice_no', 'invoiceNumber'),
     packName: field(f, 'pack_name', 'packName'),
     deliverables: field(f, 'deliverables', 'comments'),
-    packAmount: formatInvoiceMoney(field(f, 'pack_amount', 'packAmount')),
+    packAmount,
     upfrontDetails: formatUpfrontDetails(field(f, 'upfront_details')),
     remainingDetails: formatRemainingDetails(field(f, 'remaining_details')),
     termsComment: formatTermsComment(field(f, 'terms_comment')),
     advancePaid: formatInvoiceMoney(field(f, 'advance_amount')),
     pendingAmount: formatInvoiceMoney(field(f, 'pending_amount')),
-    advanceReceived: formatInvoiceMoney(field(f, 'advance_received')),
-    pendingBalance: formatInvoiceMoney(field(f, 'pending_balance')),
-    dueDate: formatLongDate(field(f, 'dueDate', 'due_date')),
+    advanceReceived,
+    pendingBalance,
+    dueDate: isFinalReceipt ? '' : formatLongDate(field(f, 'dueDate', 'due_date')),
     totalPaid: formatInvoiceMoney(field(f, 'total_paid')),
     finalPending: formatInvoiceMoney(field(f, 'final_pending')),
   }
